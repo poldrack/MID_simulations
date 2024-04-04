@@ -1,0 +1,51 @@
+TRIAL TRIAL_TYPE CUE_ONSET CUE_DUR FIX_ONSET FIX_DUR PRB_ONSET PRB_DUR FB_TYPE FB_ONSET FB_DUR PRB_HIT PRB_RT MISS_RSN
+1 LgPun 0.018 2 2.001 1.5 3.501 0.377 You lose $5! 3.951 1.573 0 0 You pressed too slow!
+2 LgReward 5.518 2 7.501 2 9.5 0.377 You earn $5! 9.95 1.573 1 347 Correct Response!
+3 Triangle 11.517 2 13.5 4 17.499 0.377 No money at stake! 17.949 1.573 0 0 You pressed too slow!
+4 LgPun 19.516 2 21.499 1.5 22.999 0.377 You keep $5! 23.449 1.573 1 331 Correct Response!
+5 LgReward 25.015 2 26.998 1.5 28.498 0.357 You earn $5! 28.931 1.593 1 277 Correct Response!
+6 LgPun 30.514 2 32.498 2 34.497 0.357 You keep $5! 34.931 1.593 1 325 Correct Response!
+7 Triangle 36.514 2 38.497 3 41.496 0.357 No money at stake! 41.93 1.593 0 0 You pressed too slow!
+8 SmallReward 43.513 2 45.496 2 47.496 0.357 You earn $0.20! 47.929 1.593 1 302 Correct Response!
+9 Triangle 49.512 2 51.495 2 53.495 0.327 No money at stake! 53.895 1.623 1 319 Correct Response!
+10 SmallReward 55.511 2 57.494 2.5 59.994 0.327 You did not earn $0.20! 60.394 1.623 0 0 You pressed too slow!
+11 Triangle 62.01 2 63.993 3.5 67.493 0.327 No money at stake! 67.893 1.623 0 0 You pressed too slow!
+12 SmallReward 69.509 2 71.493 4 75.492 0.327 You did not earn $0.20! 75.892 1.623 0 0 You pressed too slow!
+13 SmallPun 77.508 2 79.492 4 83.491 0.327 You keep $0.20! 83.891 1.623 1 314 Correct Response!
+14 SmallReward 85.507 2 87.491 1.5 88.99 0.307 You did not earn $0.20! 89.374 1.643 0 0 You pressed too slow!
+15 Triangle 91.007 2 92.99 1.5 94.49 0.307 No money at stake! 94.873 1.643 0 0 You pressed too slow!
+16 LgPun 96.506 2 98.489 1.5 99.989 0.307 You lose $5! 100.372 1.643 0 0 You pressed too slow!
+17 SmallPun 102.005 2 103.988 2 105.988 0.307 You keep $0.20! 106.372 1.643 1 265 Correct Response!
+18 SmallReward 108.005 2 109.988 3 112.987 0.347 You earn $0.20! 113.404 1.603 1 290 Correct Response!
+19 LgPun 115.004 2 116.987 3.5 120.486 0.347 You keep $5! 120.903 1.603 1 286 Correct Response!
+20 Triangle 122.503 2 124.486 1.5 125.986 0.347 No money at stake! 126.402 1.603 0 0 You pressed too slow!
+21 LgPun 128.002 2 129.985 1.5 131.485 0.347 You lose $5! 131.902 1.603 0 0 You pressed too slow!
+22 SmallPun 133.501 2 135.485 3.5 138.984 0.367 You keep $0.20! 139.434 1.583 1 252 Correct Response!
+23 SmallReward 141 2 142.984 1.5 144.483 0.367 You did not earn $0.20! 144.933 1.583 0 0 You pressed too slow!
+24 SmallPun 146.5 2 148.483 2.5 150.982 0.367 You lose $0.20! 151.432 1.583 0 0 You pressed too soon!
+25 SmallPun 152.999 2 154.982 1.5 156.482 0.387 You lose $0.20! 156.948 1.563 0 0 You pressed too slow!
+26 LgPun 158.498 2 160.481 2.5 162.981 0.387 You keep $5! 163.448 1.563 1 302 Correct Response!
+27 SmallReward 164.997 2 166.98 1.5 168.48 0.387 You earn $0.20! 168.947 1.563 1 363 Correct Response!
+28 LgReward 170.497 2 172.48 1.5 173.98 0.407 You earn $5! 174.463 1.543 1 327 Correct Response!
+29 LgReward 175.996 2 177.979 2.5 180.479 0.407 You earn $5! 180.962 1.543 1 324 Correct Response!
+30 SmallPun 182.495 2 184.478 2 186.478 0.407 You keep $0.20! 186.961 1.543 1 365 Correct Response!
+31 SmallReward 188.494 2 190.477 1.5 191.977 0.377 You earn $0.20! 192.427 1.573 1 354 Correct Response!
+32 SmallPun 193.994 2 195.977 1.5 197.477 0.377 You lose $0.20! 197.927 1.573 0 0 You pressed too slow!
+33 Triangle 199.493 2 201.476 2.5 203.976 0.377 No money at stake! 204.426 1.573 0 0 You pressed too slow!
+34 LgReward 205.992 2 207.975 1.5 209.475 0.377 You did not earn $5! 209.925 1.573 0 0 You pressed too slow!
+35 LgPun 211.491 2 213.475 2 215.474 0.357 You lose $5! 215.908 1.593 0 0 You pressed too slow!
+36 LgReward 217.491 2 219.474 3.5 222.973 0.357 You earn $5! 223.407 1.593 1 293 Correct Response!
+37 LgPun 224.99 2 226.973 3 229.972 0.357 You keep $5! 230.406 1.593 1 350 Correct Response!
+38 SmallReward 231.989 2 233.972 2 235.972 0.377 You earn $0.20! 236.422 1.573 1 326 Correct Response!
+39 SmallPun 237.988 2 239.971 1.5 241.471 0.377 You lose $0.20! 241.921 1.573 0 0 You pressed too slow!
+40 LgReward 243.487 2 245.471 4 249.47 0.377 You earn $5! 249.92 1.573 1 332 Correct Response!
+41 Triangle 251.486 2 253.47 1.5 254.969 0.357 No money at stake! 255.403 1.593 0 0 You pressed too slow!
+42 LgReward 256.986 2 258.969 2 260.969 0.357 You did not earn $5! 261.402 1.593 0 0 You pressed too slow!
+43 SmallPun 262.985 2 264.968 3 267.968 0.357 You lose $0.20! 268.401 1.593 0 0 You pressed too slow!
+44 Triangle 269.984 2 271.967 1.5 273.467 0.357 No money at stake! 273.9 1.593 0 0 You pressed too slow!
+45 SmallPun 275.483 2 277.466 1.5 278.966 0.357 You keep $0.20! 279.4 1.593 1 307 Correct Response!
+46 LgPun 280.983 2 282.966 4 286.965 0.377 You keep $5! 287.415 1.573 1 276 Correct Response!
+47 Triangle 288.982 2 290.965 2 292.964 0.377 No money at stake! 293.414 1.573 0 0 You pressed too slow!
+48 LgReward 294.981 2 296.964 3 299.964 0.377 You earn $5! 300.414 1.573 1 252 Correct Response!
+49 LgReward 301.98 2 303.963 1.5 305.463 0.377 You earn $5! 305.913 1.573 1 353 Correct Response!
+50 SmallReward 307.479 2 309.462 3.5 312.962 0.357 You earn $0.20! 313.395 1.593 1 262 Correct Response!
