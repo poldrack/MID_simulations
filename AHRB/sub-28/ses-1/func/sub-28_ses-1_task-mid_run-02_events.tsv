@@ -1,0 +1,51 @@
+TRIAL_TYPE	CUE_ONSET	CUE_DURATION	FIXATION_ONSET	FIXATION_DURATION	PROBE_ONSET	PROBE_DURATION	FEEDBACK_ONSET	FEEDBACK_DURATION	TRIAL_RESULT	RESULT_REASON	PROBE_HIT	PROBE_MRT
+SmallGain	0.014	2	1.997	1.5	3.497	0.333	3.914	1.617	You did not earn $0.20!	You pressed too slow!	0	0
+LargeGain	5.513	2	7.496	1.5	8.996	0.333	9.413	1.617	You did not earn $5!	You pressed too slow!	0	0
+LargeGain	11.012	2	12.995	1.5	14.495	0.333	14.912	1.617	You did not earn $5!	You pressed too slow!	0	0
+SmallGain	16.511	2	18.494	4.0	22.494	0.403	22.977	1.547	You did not earn $0.20!	You pressed too soon!	0	0
+LargeLoss	24.51	2	26.493	1.5	27.993	0.403	28.476	1.547	You keep $5!	Correct Response!	1	316
+LargeLoss	30.009	2	31.992	1.5	33.492	0.403	33.975	1.547	You keep $5!	Correct Response!	1	296
+LargeGain	35.508	2	37.491	1.5	38.991	0.443	39.507	1.507	You earn $5!	Correct Response!	1	325
+SmallLoss	41.007	2	42.99	3.5	46.49	0.443	47.006	1.507	You keep $0.20!	Correct Response!	1	322
+LargeGain	48.506	2	50.489	4.0	54.488	0.443	55.005	1.507	You earn $5!	Correct Response!	1	315
+LargeLoss	56.505	2	58.488	2.5	60.987	0.413	61.47	1.537	You keep $5!	Correct Response!	1	336
+SmallLoss	63.003	2	64.986	1.5	66.486	0.413	66.969	1.537	You keep $0.20!	Correct Response!	1	380
+SmallLoss	68.502	2	70.485	1.5	71.985	0.413	72.468	1.537	You lose $0.20!	You pressed too slow!	0	0
+LargeLoss	74.002	2	75.985	1.5	77.484	0.383	77.934	1.567	You keep $5!	Correct Response!	1	338
+NoMoneyStake	79.501	2	81.484	1.5	82.983	0.383	83.45	1.567	No money at stake!	Correct Response!	1	346
+SmallLoss	85.0	2	86.983	1.5	88.482	0.383	88.949	1.567	You lose $0.20!	You pressed too slow!	0	0
+SmallLoss	90.499	2	92.482	2.0	94.481	0.383	94.931	1.567	You keep $0.20!	Correct Response!	1	303
+LargeGain	96.498	2	98.481	3.5	101.98	0.363	102.413	1.587	You earn $5!	Correct Response!	1	292
+LargeGain	103.996	2	105.979	3.0	108.979	0.363	109.412	1.587	You earn $5!	Correct Response!	1	332
+SmallGain	110.995	2	112.978	3.5	116.478	0.363	116.911	1.587	You earn $0.20!	Correct Response!	1	353
+NoMoneyStake	118.494	2	120.477	3.5	123.976	0.333	124.393	1.617	No money at stake!	You pressed too slow!	0	0
+SmallLoss	125.993	2	127.976	1.5	129.475	0.333	129.892	1.617	You lose $0.20!	You pressed too slow!	0	0
+SmallGain	131.492	2	133.475	1.5	134.974	0.333	135.374	1.617	You earn $0.20!	Correct Response!	1	295
+LargeLoss	136.991	2	138.974	1.5	140.473	0.333	140.873	1.617	You lose $5!	You pressed too slow!	0	0
+NoMoneyStake	142.49	2	144.473	3.0	147.472	0.313	147.855	1.637	No money at stake!	You pressed too slow!	0	0
+NoMoneyStake	149.489	2	151.472	1.5	152.971	0.313	153.354	1.637	No money at stake!	You pressed too slow!	0	0
+SmallLoss	154.988	2	156.971	3.0	159.97	0.313	160.353	1.637	You keep $0.20!	Correct Response!	1	290
+SmallGain	161.986	2	163.969	2.0	165.969	0.313	166.352	1.637	You earn $0.20!	Correct Response!	1	298
+SmallLoss	167.985	2	169.968	4.0	173.968	0.313	174.351	1.637	You keep $0.20!	Correct Response!	1	307
+LargeGain	175.984	2	177.967	2.0	179.967	0.293	180.333	1.657	You did not earn $5!	You pressed too slow!	0	0
+SmallGain	181.983	2	183.966	1.5	185.466	0.293	185.832	1.657	You did not earn $0.20!	You pressed too slow!	0	0
+LargeGain	187.482	2	189.465	1.5	190.965	0.293	191.331	1.657	You did not earn $5!	You pressed too slow!	0	0
+SmallGain	192.981	2	194.964	2.0	196.964	0.313	197.347	1.637	You earn $0.20!	Correct Response!	1	269
+LargeLoss	198.98	2	200.963	3.0	203.962	0.313	204.346	1.637	You keep $5!	Correct Response!	1	294
+SmallLoss	205.979	2	207.962	2.0	209.961	0.313	210.345	1.637	You keep $0.20!	Correct Response!	1	279
+NoMoneyStake	211.978	2	213.961	2.5	216.46	0.333	216.86	1.617	No money at stake!	Correct Response!	1	308
+NoMoneyStake	218.477	2	220.46	2.0	222.459	0.333	222.876	1.617	No money at stake!	You pressed too slow!	0	0
+SmallLoss	224.476	2	226.459	2.5	228.958	0.333	229.375	1.617	You lose $0.20!	You pressed too slow!	0	0
+SmallGain	230.974	2	232.957	3.0	235.957	0.333	236.357	1.617	You earn $0.20!	Correct Response!	1	289
+LargeLoss	237.973	2	239.956	2.0	241.956	0.333	242.372	1.617	You lose $5!	You pressed too slow!	0	0
+LargeLoss	243.972	2	245.955	3.5	249.455	0.313	249.838	1.637	You lose $5!	You pressed too slow!	0	0
+LargeGain	251.471	2	253.454	2.0	255.454	0.313	255.837	1.637	You did not earn $5!	You pressed too slow!	0	0
+LargeGain	257.47	2	259.453	2.5	261.952	0.313	262.336	1.637	You earn $5!	Correct Response!	1	292
+NoMoneyStake	263.969	2	265.952	2.0	267.951	0.353	268.385	1.597	No money at stake!	You pressed too slow!	0	0
+NoMoneyStake	269.968	2	271.951	1.5	273.45	0.353	273.884	1.597	No money at stake!	You pressed too slow!	0	0
+LargeLoss	275.467	2	277.45	2.0	279.449	0.353	279.883	1.597	You lose $5!	You pressed too slow!	0	0
+NoMoneyStake	281.466	2	283.449	4.0	287.448	0.353	287.881	1.597	No money at stake!	You pressed too slow!	0	0
+NoMoneyStake	289.464	2	291.447	1.5	292.947	0.353	293.38	1.597	No money at stake!	Correct Response!	1	319
+LargeLoss	294.963	2	296.946	4.0	300.946	0.353	301.379	1.597	You keep $5!	Correct Response!	1	328
+SmallGain	302.962	2	304.945	1.5	306.445	0.353	306.878	1.597	You earn $0.20!	Correct Response!	1	324
+SmallGain	308.461	2	310.444	2.5	312.944	0.373	313.394	1.577	You earn $0.20!	Correct Response!	1	321
