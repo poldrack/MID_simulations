@@ -1,193 +1,194 @@
 # functions for simulations
 
-import pandas as pd
-import numpy as np
-from scipy.stats import gamma
-from nilearn.glm import expression_to_contrast_vector
-from nilearn.glm.first_level.hemodynamic_models import spm_hrf, spm_time_derivative
-from joblib import Parallel, delayed
 import multiprocessing
-from scipy.stats import ttest_1samp
-from statsmodels.stats.outliers_influence import variance_inflation_factor
 from glob import glob
 
+import numpy as np
+import pandas as pd
+from joblib import Parallel, delayed
+from nilearn.glm import expression_to_contrast_vector
+from nilearn.glm.first_level.hemodynamic_models import spm_hrf, spm_time_derivative
+from scipy.stats import gamma, ttest_1samp
+from statsmodels.stats.outliers_influence import variance_inflation_factor
 
-def get_beta_dicts(dataset="AHRB"):
-    if (dataset == "AHRB") or (dataset == "testdata"):
+
+def get_beta_dicts(dataset='AHRB'):
+    if (dataset == 'AHRB') or (dataset == 'testdata'):
         beta_dicts = [
             {},
-            {"Cue: LargeWin": 0.4, "Cue: SmallWin": 0.4},
-            {"Fixation: LargeWin": 0.5, "Fixation: SmallWin": 0.5},
+            {'Cue: LargeWin': 0.3, 'Cue: SmallWin': 0.3},
+            {'Fixation: LargeWin': 0.3, 'Fixation: SmallWin': 0.3},
             {
-                "Cue: LargeWin": 0.25,
-                "Cue: SmallWin": 0.25,
-                "Fixation: LargeWin": 0.25,
-                "Fixation: SmallWin": 0.25,
+                'Cue: LargeWin': 0.3,
+                'Cue: SmallWin': 0.3,
+                'Fixation: LargeWin': 0.3,
+                'Fixation: SmallWin': 0.3,
             },
-            {"Probe": 1},
-            {"Feedback: LargeWinHit": 0.4, "Feedback: SmallWinHit": 0.4},
-            {"Feedback: LargeWinHit": 0.2, "Feedback: LargeWinMiss": -0.2},
+            {'Probe': 1.25},
+            {'Feedback: LargeWinHit': 0.4, 'Feedback: SmallWinHit': 0.4},
+            {'Feedback: LargeWinHit': 0.2, 'Feedback: LargeWinMiss': -0.2},
         ]
-    elif dataset == "ABCD":
+    elif dataset == 'ABCD':
         beta_dicts = [
             {},
-            {"Cue: LargeWin": 0.4, "Cue: SmallWin": 0.4},
-            {"Fixation: LargeWin": 0.5, "Fixation: SmallWin": 0.5},
+            {'Cue: LargeWin': 0.3, 'Cue: SmallWin': 0.3},
+            {'Fixation: LargeWin': 0.3, 'Fixation: SmallWin': 0.3},
             {
-                "Cue: LargeWin": 0.25,
-                "Cue: SmallWin": 0.25,
-                "Fixation: LargeWin": 0.25,
-                "Fixation: SmallWin": 0.25,
+                'Cue: LargeWin': 0.3,
+                'Cue: SmallWin': 0.3,
+                'Fixation: LargeWin': 0.3,
+                'Fixation: SmallWin': 0.3,
             },
-            {"Probe: RT": 5},
-            {"Feedback: LargeWinHit": 0.4, "Feedback: SmallWinHit": 0.4},
-            {"Feedback: LargeWinHit": 0.2, "Feedback: LargeWinMiss": -0.2},
+            {'Probe': 1.25},
+            {'Probe: RT': 0.75},
+            {'Feedback: LargeWinHit': 0.4, 'Feedback: SmallWinHit': 0.4},
+            {'Feedback: LargeWinHit': 0.2, 'Feedback: LargeWinMiss': -0.2},
         ]
     return beta_dicts
 
 
 desmat_column_rename = {
-    "CUE_LargeGain": "Cue: LargeWin",
-    "CUE_LargeGain_derivative": "Cue: LargeWin Derivative",
-    "CUE_LargeLoss": "Cue: LargeLoss",
-    "CUE_LargeLoss_derivative": "Cue: LargeLoss Derivative",
-    "CUE_NoMoneyStake": "Cue: Neutral",
-    "CUE_NoMoneyStake_derivative": "Cue: Neutral Derivative",
-    "CUE_SmallGain": "Cue: SmallWin",
-    "CUE_SmallGain_derivative": "Cue: SmallWin Derivative",
-    "CUE_SmallLoss": "Cue: SmallLoss",
-    "CUE_SmallLoss_derivative": "Cue: SmallLoss Derivative",
-    "FIXATION_LargeGain": "Fixation: LargeWin",
-    "FIXATION_LargeLoss": "Fixation: LargeLoss",
-    "FIXATION_NoMoneyStake": "Fixation: Neutral",
-    "FIXATION_SmallGain": "Fixation: SmallWin",
-    "FIXATION_SmallLoss": "Fixation: SmallLoss",
-    "PROBE": "Probe",
-    "PROBE_RT": "Probe: RT",
-    "FEEDBACK_HIT_LargeGain": "Feedback: LargeWinHit",
-    "FEEDBACK_HIT_LargeLoss": "Feedback: LargeLossHit",
-    "FEEDBACK_HIT_NoMoneyStake": "Feedback: NeutralHit",
-    "FEEDBACK_HIT_SmallGain": "Feedback: SmallWinHit",
-    "FEEDBACK_HIT_SmallLoss": "Feedback: SmallLossHit",
-    "FEEDBACK_MISS_LargeGain": "Feedback: LargeWinMiss",
-    "FEEDBACK_MISS_LargeLoss": "Feedback: LargeLossMiss",
-    "FEEDBACK_MISS_NoMoneyStake": "Feedback: NeutralMiss",
-    "FEEDBACK_MISS_SmallGain": "Feedback: SmallWinMiss",
-    "FEEDBACK_MISS_SmallLoss": "Feedback: SmallLossMiss",
-    "FEEDBACK_HIT_LargeGain_derivative": "Feedback: LargeWinHit Derivative",
-    "FEEDBACK_HIT_LargeLoss_derivative": "Feedback: LargeLossHit Derivative",
-    "FEEDBACK_HIT_NoMoneyStake_derivative": "Feedback: NeutralHit Derivative",
-    "FEEDBACK_HIT_SmallGain_derivative": "Feedback: SmallWinHit Derivative",
-    "FEEDBACK_HIT_SmallLoss_derivative": "Feedback: SmallLossHit Derivative",
-    "FEEDBACK_MISS_LargeGain_derivative": "Feedback: LargeWinMiss Derivative",
-    "FEEDBACK_MISS_LargeLoss_derivative": "Feedback: LargeLossMiss Derivative",
-    "FEEDBACK_MISS_NoMoneyStake_derivative": "Feedback: NeutralMiss Derivative",
-    "FEEDBACK_MISS_SmallGain_derivative": "Feedback: SmallWinMiss Derivative",
-    "FEEDBACK_MISS_SmallLoss_derivative": "Feedback: SmallLossMiss Derivative",
+    'CUE_LargeGain': 'Cue: LargeWin',
+    'CUE_LargeGain_derivative': 'Cue: LargeWin Derivative',
+    'CUE_LargeLoss': 'Cue: LargeLoss',
+    'CUE_LargeLoss_derivative': 'Cue: LargeLoss Derivative',
+    'CUE_NoMoneyStake': 'Cue: Neutral',
+    'CUE_NoMoneyStake_derivative': 'Cue: Neutral Derivative',
+    'CUE_SmallGain': 'Cue: SmallWin',
+    'CUE_SmallGain_derivative': 'Cue: SmallWin Derivative',
+    'CUE_SmallLoss': 'Cue: SmallLoss',
+    'CUE_SmallLoss_derivative': 'Cue: SmallLoss Derivative',
+    'FIXATION_LargeGain': 'Fixation: LargeWin',
+    'FIXATION_LargeLoss': 'Fixation: LargeLoss',
+    'FIXATION_NoMoneyStake': 'Fixation: Neutral',
+    'FIXATION_SmallGain': 'Fixation: SmallWin',
+    'FIXATION_SmallLoss': 'Fixation: SmallLoss',
+    'PROBE': 'Probe',
+    'PROBE_RT': 'Probe: RT',
+    'FEEDBACK_HIT_LargeGain': 'Feedback: LargeWinHit',
+    'FEEDBACK_HIT_LargeLoss': 'Feedback: LargeLossHit',
+    'FEEDBACK_HIT_NoMoneyStake': 'Feedback: NeutralHit',
+    'FEEDBACK_HIT_SmallGain': 'Feedback: SmallWinHit',
+    'FEEDBACK_HIT_SmallLoss': 'Feedback: SmallLossHit',
+    'FEEDBACK_MISS_LargeGain': 'Feedback: LargeWinMiss',
+    'FEEDBACK_MISS_LargeLoss': 'Feedback: LargeLossMiss',
+    'FEEDBACK_MISS_NoMoneyStake': 'Feedback: NeutralMiss',
+    'FEEDBACK_MISS_SmallGain': 'Feedback: SmallWinMiss',
+    'FEEDBACK_MISS_SmallLoss': 'Feedback: SmallLossMiss',
+    'FEEDBACK_HIT_LargeGain_derivative': 'Feedback: LargeWinHit Derivative',
+    'FEEDBACK_HIT_LargeLoss_derivative': 'Feedback: LargeLossHit Derivative',
+    'FEEDBACK_HIT_NoMoneyStake_derivative': 'Feedback: NeutralHit Derivative',
+    'FEEDBACK_HIT_SmallGain_derivative': 'Feedback: SmallWinHit Derivative',
+    'FEEDBACK_HIT_SmallLoss_derivative': 'Feedback: SmallLossHit Derivative',
+    'FEEDBACK_MISS_LargeGain_derivative': 'Feedback: LargeWinMiss Derivative',
+    'FEEDBACK_MISS_LargeLoss_derivative': 'Feedback: LargeLossMiss Derivative',
+    'FEEDBACK_MISS_NoMoneyStake_derivative': 'Feedback: NeutralMiss Derivative',
+    'FEEDBACK_MISS_SmallGain_derivative': 'Feedback: SmallWinMiss Derivative',
+    'FEEDBACK_MISS_SmallLoss_derivative': 'Feedback: SmallLossMiss Derivative',
 }
 
 
-def load_event_file(eventfile: str, verbose=False, sep="\t"):
-    assert sep in ["\t", ","], "invalid separator"
+def load_event_file(eventfile: str, verbose=False, sep='\t'):
+    assert sep in ['\t', ','], 'invalid separator'
     df = pd.read_csv(eventfile, sep=sep)
     if verbose:
-        print(f"Loading {eventfile}")
+        print(f'Loading {eventfile}')
         print(df.shape)
-    assert df.shape[1] > 2, "bad parsing"
+    assert df.shape[1] > 2, 'bad parsing'
     return df
 
 
-def check_events_df_long(events_long, dataset="AHRB"):
-    required_columns = ["onset", "duration", "trial_type"]
-    num_trial_types = len(events_long["trial_type"].unique())
+def check_events_df_long(events_long, dataset='AHRB'):
+    required_columns = ['onset', 'duration', 'trial_type']
+    num_trial_types = len(events_long['trial_type'].unique())
     assert all(
         [col in events_long.columns for col in required_columns]
-    ), "events_long missing required columns"
-    assert events_long.shape[0] > 0, "events_df has no rows"
-    assert events_long.shape[1] == 3, "events_df has extra columns"
-    if dataset == "ABCD":
-        assert num_trial_types == 22, "ABCD should have 22 trial types"
-    elif (dataset == "AHRB") or (dataset == "testdata"):
-        assert num_trial_types == 25, "AHRB should have 25 trial types"
+    ), 'events_long missing required columns'
+    assert events_long.shape[0] > 0, 'events_df has no rows'
+    assert events_long.shape[1] == 3, 'events_df has extra columns'
+    if dataset == 'ABCD':
+        assert num_trial_types == 22, 'ABCD should have 22 trial types'
+    elif (dataset == 'AHRB') or (dataset == 'testdata'):
+        assert num_trial_types == 25, 'AHRB should have 25 trial types'
 
 
-def get_events_df_for_subject(sub, dataset="AHRB", verbose=False):
+def get_events_df_for_subject(sub, dataset='AHRB', verbose=False):
     sub = str(sub).zfill(2)
     events_df = None
     maxtime = None
     for run in [1, 2]:
-        eventfile = f"{dataset}/sub-{sub}/ses-1/func/sub-{sub}_ses-1_task-mid_run-0{run}_events.tsv"
+        eventfile = f'{dataset}/sub-{sub}/ses-1/func/sub-{sub}_ses-1_task-mid_run-0{run}_events.tsv'
         df = load_event_file(eventfile, verbose)
         if events_df is None:
             events_df = df
             maxtime = np.ceil(
-                events_df["FEEDBACK_ONSET"].max()
-                + events_df["FEEDBACK_DURATION"].values[-1]
+                events_df['FEEDBACK_ONSET'].max()
+                + events_df['FEEDBACK_DURATION'].values[-1]
             )
         else:
-            onset_cols = [col for col in df.columns if "ONSET" in col]
+            onset_cols = [col for col in df.columns if 'ONSET' in col]
             for col in onset_cols:
                 df[col] += maxtime
             events_df = pd.concat([events_df, df])
     events_df.reset_index(inplace=True)
-    events_df["trial_number"] = events_df.index
+    events_df['trial_number'] = events_df.index
     return events_df
 
 
-def get_subdata_long(sub, dataset="AHRB", verbose=False):
+def get_subdata_long(sub, dataset='AHRB', verbose=False):
     # reformat from wide to long format
-    if dataset not in ["AHRB", "ABCD", "testdata"]:
-        raise ValueError("Invalid dataset, must be AHRB, ABCD, or testdata")
+    if dataset not in ['AHRB', 'ABCD', 'testdata']:
+        raise ValueError('Invalid dataset, must be AHRB, ABCD, or testdata')
     events_df = get_events_df_for_subject(sub, dataset=dataset, verbose=verbose)
 
-    if (dataset == "AHRB") or (dataset == "testdata"):
-        event_names = ["CUE", "FIXATION", "PROBE", "FEEDBACK"]
-    elif dataset == "ABCD":
-        events_df["PROBE_RT_ONSET"] = events_df["PROBE_ONSET"]
-        events_df["PROBE_RT_DURATION"] = events_df["RT_corrected"] / 1000
-        event_names = ["CUE", "FIXATION", "PROBE", "PROBE_RT", "FEEDBACK"]
+    if (dataset == 'AHRB') or (dataset == 'testdata'):
+        event_names = ['CUE', 'FIXATION', 'PROBE', 'FEEDBACK']
+    elif dataset == 'ABCD':
+        events_df['PROBE_RT_ONSET'] = events_df['PROBE_ONSET']
+        events_df['PROBE_RT_DURATION'] = events_df['RT_corrected'] / 1000
+        event_names = ['CUE', 'FIXATION', 'PROBE', 'PROBE_RT', 'FEEDBACK']
 
     events_long_onsets = events_df.melt(
-        id_vars=["TRIAL_TYPE", "PROBE_HIT", "trial_number"],
-        value_vars=[f"{val}_ONSET" for val in event_names],
-        var_name="event",
-        value_name="onset",
+        id_vars=['TRIAL_TYPE', 'PROBE_HIT', 'trial_number'],
+        value_vars=[f'{val}_ONSET' for val in event_names],
+        var_name='event',
+        value_name='onset',
     )
-    events_long_onsets["event"] = events_long_onsets["event"].str.replace("_ONSET", "")
+    events_long_onsets['event'] = events_long_onsets['event'].str.replace('_ONSET', '')
     events_long_durations = events_df.melt(
-        id_vars=["TRIAL_TYPE", "PROBE_HIT", "trial_number"],
-        value_vars=[f"{val}_DURATION" for val in event_names],
-        var_name="event",
-        value_name="duration",
+        id_vars=['TRIAL_TYPE', 'PROBE_HIT', 'trial_number'],
+        value_vars=[f'{val}_DURATION' for val in event_names],
+        var_name='event',
+        value_name='duration',
     )
-    events_long_durations["event"] = events_long_durations["event"].str.replace(
-        "_DURATION", ""
+    events_long_durations['event'] = events_long_durations['event'].str.replace(
+        '_DURATION', ''
     )
 
     events_long = pd.merge(
         events_long_onsets,
         events_long_durations,
-        on=["TRIAL_TYPE", "PROBE_HIT", "trial_number", "event"],
+        on=['TRIAL_TYPE', 'PROBE_HIT', 'trial_number', 'event'],
     )
-    events_long.sort_values("onset", inplace=True)
-    events_long["FEEDBACK_HIT_MISS"] = events_long["PROBE_HIT"].map(
-        {1: "FEEDBACK_HIT", 0: "FEEDBACK_MISS"}
+    events_long.sort_values('onset', inplace=True)
+    events_long['FEEDBACK_HIT_MISS'] = events_long['PROBE_HIT'].map(
+        {1: 'FEEDBACK_HIT', 0: 'FEEDBACK_MISS'}
     )
-    events_long.loc[events_long["event"] == "FEEDBACK", "event"] = events_long.loc[
-        events_long["event"] == "FEEDBACK", "FEEDBACK_HIT_MISS"
+    events_long.loc[events_long['event'] == 'FEEDBACK', 'event'] = events_long.loc[
+        events_long['event'] == 'FEEDBACK', 'FEEDBACK_HIT_MISS'
     ]
 
-    if (dataset == "AHRB") or (dataset == "testdata"):
-        events_long["event"] = events_long["event"] + "_"
-    if dataset == "ABCD":
-        events_long.loc[events_long["event"].str.contains("PROBE"), "TRIAL_TYPE"] = ""
-        events_long.loc[~events_long["event"].str.contains("PROBE"), "event"] = (
-            events_long.loc[~events_long["event"].str.contains("PROBE"), "event"] + "_"
+    if (dataset == 'AHRB') or (dataset == 'testdata'):
+        events_long['event'] = events_long['event'] + '_'
+    if dataset == 'ABCD':
+        events_long.loc[events_long['event'].str.contains('PROBE'), 'TRIAL_TYPE'] = ''
+        events_long.loc[~events_long['event'].str.contains('PROBE'), 'event'] = (
+            events_long.loc[~events_long['event'].str.contains('PROBE'), 'event'] + '_'
         )
 
-    events_long["trial_type"] = events_long["event"] + events_long["TRIAL_TYPE"]
+    events_long['trial_type'] = events_long['event'] + events_long['TRIAL_TYPE']
     events_long.drop(
-        ["TRIAL_TYPE", "PROBE_HIT", "FEEDBACK_HIT_MISS", "trial_number", "event"],
+        ['TRIAL_TYPE', 'PROBE_HIT', 'FEEDBACK_HIT_MISS', 'trial_number', 'event'],
         axis=1,
         inplace=True,
     )
@@ -198,14 +199,14 @@ def get_subdata_long(sub, dataset="AHRB", verbose=False):
 
 def insert_jitter(events_in, min_iti=2, max_iti=6):
     events = events_in.copy()
-    events.sort_values("onset", inplace=True)
+    events.sort_values('onset', inplace=True)
     # Check number of stimuli between Cue stimuli
     num_stim_between_cue_trials = (
-        events.index[events["trial_type"].str.contains("CUE")].diff().dropna()
+        events.index[events['trial_type'].str.contains('CUE')].diff().dropna()
     )
     assert (
         len(num_stim_between_cue_trials.unique()) == 1
-    ), "different number of stimuli between CUE events"
+    ), 'different number of stimuli between CUE events'
     num_jitter = int(events.shape[0] / num_stim_between_cue_trials[0])
     jitter = np.round(np.random.uniform(min_iti, max_iti, num_jitter), 2)
     jitter[0] = 0
@@ -213,7 +214,7 @@ def insert_jitter(events_in, min_iti=2, max_iti=6):
     cumulative_jitter_repeat = np.repeat(
         cumulative_jitter, num_stim_between_cue_trials[0]
     )
-    events["onset"] += cumulative_jitter_repeat
+    events['onset'] += cumulative_jitter_repeat
     return events
 
 
@@ -246,7 +247,7 @@ def spm_hrf_russ(TR, p=[6, 16, 1, 1, 6, 0, 32]):
         - gamma.pdf(u, p[1] / p[3], scale=1.0 / (dt / p[3])) / p[4]
     )
     good_pts = np.array(range(int(p[6] / TR))) * fMRI_T
-    hrf = hrf[list(good_pts.astype("int"))]
+    hrf = hrf[list(good_pts.astype('int'))]
     hrf = hrf / np.sum(hrf)
     return hrf
 
@@ -276,7 +277,7 @@ def make_stick_function(onsets, durations, length, resolution=0.2):
     sf = np.zeros_like(timepoints)
     for onset, duration in zip(onsets, durations):
         sf[(timepoints >= onset) & (timepoints < onset + duration)] = 1
-    sf_df = pd.DataFrame({"sf": sf})
+    sf_df = pd.DataFrame({'sf': sf})
     sf_df.index = timepoints
     return sf_df
 
@@ -290,26 +291,26 @@ def create_design_matrix(
     desmat_column_rename=desmat_column_rename,
 ):
     conv_resolution = tr / oversampling
-    maxtime = np.ceil(np.max(events_df_long["onset"]) + 10)
+    maxtime = np.ceil(np.max(events_df_long['onset']) + 10)
     timepoints_conv = np.round(np.arange(0, maxtime, conv_resolution), 3)
     timepoints_data = np.round(np.arange(0, maxtime, tr), 3)
     hrf_func = spm_hrf(tr, oversampling=oversampling)
     hrf_deriv_func = spm_time_derivative(tr, oversampling=oversampling)
     if verbose:
-        print(f"Maxtime: {maxtime}")
-        print(f"Timepoints convolution: {timepoints_conv.shape}")
-        print(f"Timepoints data: {timepoints_data.shape}")
-    trial_types = events_df_long["trial_type"].unique()
+        print(f'Maxtime: {maxtime}')
+        print(f'Timepoints convolution: {timepoints_conv.shape}')
+        print(f'Timepoints data: {timepoints_data.shape}')
+    trial_types = events_df_long['trial_type'].unique()
     desmtx_microtime = pd.DataFrame()
     desmtx_conv_microtime = pd.DataFrame()
 
     for trial_type in trial_types:
-        trial_type_onsets = events_df_long[events_df_long["trial_type"] == trial_type][
-            "onset"
+        trial_type_onsets = events_df_long[events_df_long['trial_type'] == trial_type][
+            'onset'
         ].values
         trial_type_durations = events_df_long[
-            events_df_long["trial_type"] == trial_type
-        ]["duration"].values
+            events_df_long['trial_type'] == trial_type
+        ]['duration'].values
         sf_df = make_stick_function(
             trial_type_onsets, trial_type_durations, maxtime, resolution=conv_resolution
         )
@@ -318,20 +319,20 @@ def create_design_matrix(
             : sf_df.shape[0]
         ]
         if add_deriv:
-            desmtx_conv_microtime[f"{trial_type}_derivative"] = np.convolve(
+            desmtx_conv_microtime[f'{trial_type}_derivative'] = np.convolve(
                 sf_df.sf.values, hrf_deriv_func
             )[: sf_df.shape[0]]
     desmtx_conv_microtime.index = timepoints_conv
     desmtx_conv = desmtx_conv_microtime.loc[timepoints_data]
     desmtx_conv = desmtx_conv.rename(columns=desmat_column_rename)
     desmtx_conv = desmtx_conv[sorted(desmtx_conv.columns)]
-    desmtx_conv["constant"] = 1
+    desmtx_conv['constant'] = 1
     return desmtx_conv
 
 
 def create_design_matrices(events_df_long, oversampling=5, tr=1, verbose=False):
     all_designs = {}
-    all_designs["Saturated"] = create_design_matrix(
+    all_designs['Saturated'] = create_design_matrix(
         events_df_long,
         oversampling=oversampling,
         tr=tr,
@@ -339,17 +340,17 @@ def create_design_matrices(events_df_long, oversampling=5, tr=1, verbose=False):
         add_deriv=False,
     )
     events_df_long_cue_imp = events_df_long[
-        events_df_long["trial_type"].str.contains("CUE|FEEDBACK")
+        events_df_long['trial_type'].str.contains('CUE|FEEDBACK')
     ].copy()
-    events_df_long_cue_imp["duration"] = tr / oversampling
-    all_designs["CueNoDeriv"] = create_design_matrix(
+    events_df_long_cue_imp['duration'] = tr / oversampling
+    all_designs['CueNoDeriv'] = create_design_matrix(
         events_df_long_cue_imp,
         oversampling=oversampling,
         tr=tr,
         verbose=verbose,
         add_deriv=False,
     )
-    all_designs["CueYesDeriv"] = create_design_matrix(
+    all_designs['CueYesDeriv'] = create_design_matrix(
         events_df_long_cue_imp,
         oversampling=oversampling,
         tr=tr,
@@ -378,24 +379,24 @@ def create_design_matrices_NO_LONGER_USING(
         Dictionary of design matrices
     """
     # create the full design matrix
-    maxtime = np.ceil(np.max(events_df_long["onset"] + events_df_long["duration"]) + 8)
+    maxtime = np.ceil(np.max(events_df_long['onset'] + events_df_long['duration']) + 8)
     timepoints_conv = np.arange(0, maxtime, conv_resolution)
     timepoints_data = np.arange(0, maxtime, tr)
     hrf_func = spm_hrf(conv_resolution)
     if verbose:
-        print(f"Maxtime: {maxtime}")
-        print(f"Timepoints convolution: {timepoints_conv.shape}")
-        print(f"Timepoints data: {timepoints_data.shape}")
-    trial_types = events_df_long["trial_type"].unique()
+        print(f'Maxtime: {maxtime}')
+        print(f'Timepoints convolution: {timepoints_conv.shape}')
+        print(f'Timepoints data: {timepoints_data.shape}')
+    trial_types = events_df_long['trial_type'].unique()
     desmtx_microtime = pd.DataFrame()
     desmtx_conv_microtime = pd.DataFrame()
     for trial_type in trial_types:
-        trial_type_onsets = events_df_long[events_df_long["trial_type"] == trial_type][
-            "onset"
+        trial_type_onsets = events_df_long[events_df_long['trial_type'] == trial_type][
+            'onset'
         ].values
         trial_type_durations = events_df_long[
-            events_df_long["trial_type"] == trial_type
-        ]["duration"].values
+            events_df_long['trial_type'] == trial_type
+        ]['duration'].values
         sf_df = make_stick_function(
             trial_type_onsets, trial_type_durations, maxtime, resolution=conv_resolution
         )
@@ -403,26 +404,26 @@ def create_design_matrices_NO_LONGER_USING(
         desmtx_conv_microtime[trial_type] = np.convolve(sf_df.sf.values, hrf_func)[
             : sf_df.shape[0]
         ]
-    desmtx_conv_microtime["constant"] = 1
+    desmtx_conv_microtime['constant'] = 1
     desmtx_conv_microtime.index = timepoints_conv
     desmtx_conv = desmtx_conv_microtime.loc[timepoints_data]
     # create other designs from the full design
     all_designs = {
-        "saturated": desmtx_conv,
-        "cue only": desmtx_conv.filter(regex="CUE|FEEDBACK|constant"),
+        'saturated': desmtx_conv,
+        'cue only': desmtx_conv.filter(regex='CUE|FEEDBACK|constant'),
         #    'fix_only': desmtx_conv.filter(regex='FIXATION|FEEDBACK|constant'),
-        "cue fix": desmtx_conv.filter(regex="FEEDBACK|constant"),
+        'cue fix': desmtx_conv.filter(regex='FEEDBACK|constant'),
     }
     # sum CUE and FIXATION regressors to make CUEFIX regressors
     trial_types = [
-        val.replace("CUE_", "") for val in desmtx_conv.columns if "CUE" in val
+        val.replace('CUE_', '') for val in desmtx_conv.columns if 'CUE' in val
     ]
     for trial_type in trial_types:
-        all_designs["cue fix"].insert(
+        all_designs['cue fix'].insert(
             0,
-            f"CUEFIX_{trial_type}",
-            desmtx_conv.loc[:, f"CUE_{trial_type}"].values
-            + desmtx_conv.loc[:, f"FIXATION_{trial_type}"].values,
+            f'CUEFIX_{trial_type}',
+            desmtx_conv.loc[:, f'CUE_{trial_type}'].values
+            + desmtx_conv.loc[:, f'FIXATION_{trial_type}'].values,
         )
     for key in all_designs.keys():
         all_designs[key] = set_regressor_order(all_designs[key])
@@ -433,23 +434,23 @@ def set_regressor_order_NO_LONGER_USED(desmat):
     reg_names = desmat.columns
     trial_types = np.sort(
         [
-            val.replace("FEEDBACK_HIT_", "")
+            val.replace('FEEDBACK_HIT_', '')
             for val in reg_names
-            if "FEEDBACK_HIT_" in val
+            if 'FEEDBACK_HIT_' in val
         ]
     )
     stim_types = [
-        val.replace("_LargeLoss", "") for val in reg_names if "LargeLoss" in val
+        val.replace('_LargeLoss', '') for val in reg_names if 'LargeLoss' in val
     ]
     regressors_ordered = [
-        f"{stim_type}_{trial_type}"
+        f'{stim_type}_{trial_type}'
         for trial_type in trial_types
         for stim_type in stim_types
     ]
-    if "PROBE_RT" in reg_names:
-        regressors_ordered = regressors_ordered + ["PROBE", "PROBE_RT", "constant"]
+    if 'PROBE_RT' in reg_names:
+        regressors_ordered = regressors_ordered + ['PROBE', 'PROBE_RT', 'constant']
     else:
-        regressors_ordered = regressors_ordered + ["constant"]
+        regressors_ordered = regressors_ordered + ['constant']
     desmat = desmat.reindex(regressors_ordered, axis=1)
     return desmat
 
@@ -475,13 +476,13 @@ def generate_data_nsim(desmtx_conv, beta_dict, nsims=100, noise_sd=1, beta_sub_s
     # check the beta dict
     betas = np.zeros((desmtx_conv.shape[1], 1))
     for key in beta_dict.keys():
-        assert key in desmtx_conv.columns, f"{key} not in desmtx"
+        assert key in desmtx_conv.columns, f'{key} not in desmtx'
     betas = np.array(
         [
             beta_dict[key] if key in beta_dict.keys() else 0
             for key in desmtx_conv.columns
         ],
-        dtype="float32",
+        dtype='float32',
     )
     betas = np.atleast_2d(betas).T
     betas_mat_noise = betas @ np.ones((1, nsims)) + np.random.normal(
@@ -511,16 +512,16 @@ def create_contrasts_NOT_USING(designs):
           To be used for contrast estimation (avoids recomputing pinv)
     """
     ant_w_vs_neut = {
-        "saturated": ".5 * CUE_LargeGain  + .5 * CUE_SmallGain - 1 * CUE_NoMoneyStake",
-        "cue only": ".5 * CUE_LargeGain + .5 * CUE_SmallGain - 1 * CUE_NoMoneyStake",
-        "fix only": ".5 * FIXATION_LargeGain + .5 * FIXATION_SmallGain - 1 * FIXATION_NoMoneyStake",
-        "cue fix": ".5 * CUEFIX_LargeGain + .5 * CUEFIX_SmallGain - 1 * CUEFIX_NoMoneyStake",
+        'saturated': '.5 * CUE_LargeGain  + .5 * CUE_SmallGain - 1 * CUE_NoMoneyStake',
+        'cue only': '.5 * CUE_LargeGain + .5 * CUE_SmallGain - 1 * CUE_NoMoneyStake',
+        'fix only': '.5 * FIXATION_LargeGain + .5 * FIXATION_SmallGain - 1 * FIXATION_NoMoneyStake',
+        'cue fix': '.5 * CUEFIX_LargeGain + .5 * CUEFIX_SmallGain - 1 * CUEFIX_NoMoneyStake',
     }
     ant_lw_vs_neut = {
-        "saturated": "1 * CUE_LargeGain - 1 * CUE_NoMoneyStake",
-        "cue only": "1 * CUE_LargeGain - 1 * CUE_NoMoneyStake",
-        "fix only": "1 * FIXATION_LargeGain - 1 * FIXATION_NoMoneyStake",
-        "cue fix": "1 * CUEFIX_LargeGain - 1 * CUEFIX_NoMoneyStake",
+        'saturated': '1 * CUE_LargeGain - 1 * CUE_NoMoneyStake',
+        'cue only': '1 * CUE_LargeGain - 1 * CUE_NoMoneyStake',
+        'fix only': '1 * FIXATION_LargeGain - 1 * FIXATION_NoMoneyStake',
+        'cue fix': '1 * CUEFIX_LargeGain - 1 * CUEFIX_NoMoneyStake',
     }
     contrasts_strings = {}
     contrast_matrices = {key: [] for key in designs.keys()}
@@ -528,15 +529,15 @@ def create_contrasts_NOT_USING(designs):
     for desname, desmat in designs.items():
         design_columns = np.sort(desmat.columns)
         contrasts_strings[desname] = {
-            colname: colname for colname in design_columns if "constant" not in colname
+            colname: colname for colname in design_columns if 'constant' not in colname
         }
-        contrasts_strings[desname]["ANT: W-Neut"] = ant_w_vs_neut[desname]
-        contrasts_strings[desname]["ANT: LW-Neut"] = ant_lw_vs_neut[desname]
-        contrasts_strings[desname]["FB: WHit-NeutHit"] = (
-            ".5 * FEEDBACK_HIT_LargeGain + .5 * FEEDBACK_HIT_SmallGain - 1 * FEEDBACK_HIT_NoMoneyStake"
+        contrasts_strings[desname]['ANT: W-Neut'] = ant_w_vs_neut[desname]
+        contrasts_strings[desname]['ANT: LW-Neut'] = ant_lw_vs_neut[desname]
+        contrasts_strings[desname]['FB: WHit-NeutHit'] = (
+            '.5 * FEEDBACK_HIT_LargeGain + .5 * FEEDBACK_HIT_SmallGain - 1 * FEEDBACK_HIT_NoMoneyStake'
         )
-        contrasts_strings[desname]["FB: LWHit-LWMiss"] = (
-            "1 * FEEDBACK_HIT_LargeGain - 1 * FEEDBACK_MISS_LargeGain"
+        contrasts_strings[desname]['FB: LWHit-LWMiss'] = (
+            '1 * FEEDBACK_HIT_LargeGain - 1 * FEEDBACK_MISS_LargeGain'
         )
         contrast_matrices[desname] = np.array(
             [
@@ -572,29 +573,29 @@ def create_contrasts(designs):
     c_pinv_xmats = {}
     for desname, desmat in designs.items():
         design_columns = np.sort(desmat.columns)
-        col_names_no_space = [name.replace(" ", "") for name in desmat.columns]
+        col_names_no_space = [name.replace(' ', '') for name in desmat.columns]
         col_names_no_space_no_colon = [
-            name.replace(":", "_") for name in col_names_no_space
+            name.replace(':', '_') for name in col_names_no_space
         ]
         contrasts_strings[desname] = {
-            colname: colname.replace(" ", "").replace(":", "_")
+            colname: colname.replace(' ', '').replace(':', '_')
             for colname in design_columns
-            if "constant" not in colname
+            if 'constant' not in colname
         }
-        contrasts_strings[desname]["CUE: W-base"] = (
-            ".5 * Cue_LargeWin  + .5 * Cue_SmallWin"
+        contrasts_strings[desname]['CUE: W-base'] = (
+            '.5 * Cue_LargeWin  + .5 * Cue_SmallWin'
         )
-        contrasts_strings[desname]["CUE: W-Neut"] = (
-            ".5 * Cue_LargeWin  + .5 * Cue_SmallWin - 1 * Cue_Neutral"
+        contrasts_strings[desname]['CUE: W-Neut'] = (
+            '.5 * Cue_LargeWin  + .5 * Cue_SmallWin - 1 * Cue_Neutral'
         )
-        contrasts_strings[desname]["CUE: LW-Neut"] = (
-            "1 * Cue_LargeWin - 1 * Cue_Neutral"
+        contrasts_strings[desname]['CUE: LW-Neut'] = (
+            '1 * Cue_LargeWin - 1 * Cue_Neutral'
         )
-        contrasts_strings[desname]["FB: WHit-NeutHit"] = (
-            ".5 * Feedback_LargeWinHit + .5 * Feedback_SmallWinHit - 1 * Feedback_NeutralHit"
+        contrasts_strings[desname]['FB: WHit-NeutHit'] = (
+            '.5 * Feedback_LargeWinHit + .5 * Feedback_SmallWinHit - 1 * Feedback_NeutralHit'
         )
-        contrasts_strings[desname]["FB: LWHit-LWMiss"] = (
-            "1 * Feedback_LargeWinHit - 1 * Feedback_LargeWinMiss"
+        contrasts_strings[desname]['FB: LWHit-LWMiss'] = (
+            '1 * Feedback_LargeWinHit - 1 * Feedback_LargeWinMiss'
         )
 
         contrast_matrices[desname] = np.array(
@@ -640,9 +641,9 @@ def est_vifs(designs):
 
 
 def est_baseline_max_range(events, oversampling=50, tr=0.8):
-    avg_durations = events.groupby("trial_type")["duration"].mean().reset_index()
-    avg_durations.columns = ["trial_type", "duration"]
-    avg_durations["onset"] = 10
+    avg_durations = events.groupby('trial_type')['duration'].mean().reset_index()
+    avg_durations.columns = ['trial_type', 'duration']
+    avg_durations['onset'] = 10
     designs = create_design_matrices(avg_durations, oversampling=oversampling, tr=tr)
     base_max_ranges = {}
     for desname, desmat in designs.items():
@@ -665,7 +666,7 @@ def est_eff_vif_all_subs(
     jitter=False,
     jitter_iti_min=2,
     jitter_iti_max=6,
-    dataset="AHRB",
+    dataset='AHRB',
 ):
     """
     Estimate the efficiency and variance inflation factor (VIF) for all subjects
@@ -676,7 +677,7 @@ def est_eff_vif_all_subs(
         try:
             events = get_subdata_long(sub, dataset=dataset)
         except Exception as e:
-            print(f"Error loading sub {sub}: {e}")
+            print(f'Error loading sub {sub}: {e}')
             continue
         if jitter:
             events = insert_jitter(
@@ -701,7 +702,7 @@ def est_eff_vif_all_subs(
         eff_output, vif_output = organize_vifs_effs(
             efficiencies, vifs, contrast_strings, designs
         )
-    return {"efficiencies": eff_output, "vifs": vif_output}
+    return {'efficiencies': eff_output, 'vifs': vif_output}
 
 
 def organize_vifs_effs(efficiencies, vifs, contrast_strings, designs):
@@ -721,13 +722,13 @@ def organize_vifs_effs(efficiencies, vifs, contrast_strings, designs):
             columns=designs[key].columns,
         )
         eff_output[key] = pd.melt(
-            eff_output[key], var_name="contrast", value_name="efficiency"
+            eff_output[key], var_name='contrast', value_name='efficiency'
         )
-        eff_output[key]["model"] = key
+        eff_output[key]['model'] = key
         vif_output[key] = pd.melt(
-            vif_output[key], var_name="regressor", value_name="vif"
+            vif_output[key], var_name='regressor', value_name='vif'
         )
-        vif_output[key]["model"] = key
+        vif_output[key]['model'] = key
     list_eff_dfs = [eff_output[key] for key in eff_output.keys()]
     eff_df = pd.concat(list_eff_dfs, axis=0)
     list_vif_dfs = [vif_output[key] for key in vif_output.keys()]
@@ -737,17 +738,17 @@ def organize_vifs_effs(efficiencies, vifs, contrast_strings, designs):
 
 def make_analysis_label(beta_dict, jitter=False, jitter_iti_min=2, jitter_iti_max=6):
     if len(beta_dict) > 0:
-        analysis_label = ", ".join([f"{key}={val}" for key, val in beta_dict.items()])
+        analysis_label = ', '.join([f'{key}={val}' for key, val in beta_dict.items()])
     else:
-        analysis_label = "Null model"
+        analysis_label = 'Null model'
     if jitter:
-        analysis_label += f"\n jittered ITIs ({jitter_iti_min}-{jitter_iti_max})"
+        analysis_label += f'\n jittered ITIs ({jitter_iti_min}-{jitter_iti_max})'
     return analysis_label
 
 
-def get_subids(dataset="AHRB"):
-    subdirs = glob(f"{dataset}/sub*")
-    subids = [string_val.split("-", 1)[1] for string_val in subdirs]
+def get_subids(dataset='AHRB'):
+    subdirs = glob(f'{dataset}/sub*')
+    subids = [string_val.split('-', 1)[1] for string_val in subdirs]
     return subids
 
 
@@ -763,13 +764,16 @@ def sim_group_models_parallel(
     jitter_iti_max=6,
     verbose=False,
     n_jobs=None,
-    dataset="AHRB",
+    dataset='AHRB',
+    nsubs=None,
 ):
     if n_jobs is None:
         n_jobs = multiprocessing.cpu_count() - 1  # save one core for the OS
     subids = get_subids(
         dataset=dataset
     )  # not using this yet since there are 4383 ABCD subjects
+    if nsubs is None:
+        nsubs = len(subids)
     results = Parallel(n_jobs=n_jobs)(
         delayed(sim_data_est_cons_sub)(
             sub,
@@ -785,10 +789,10 @@ def sim_group_models_parallel(
             verbose=verbose,
             dataset=dataset,
         )
-        for sub in range(1, 109)
+        for sub in range(1, nsubs + 1)
     )
     group_model_output_df, contrast_strings = organize_sim_data_results(results)
-    desmats_example = results[0]["designs"]
+    desmats_example = results[0]['designs']
     # used in plotting to indicate when rejection rate reflects power (1) or error rate (.5)
     group_model_output_df = make_pow_error_column(
         group_model_output_df, beta_dict, contrast_strings
@@ -809,14 +813,14 @@ def sim_data_est_cons_sub(
     jitter_iti_min=2,
     jitter_iti_max=6,
     verbose=False,
-    dataset="AHRB",
+    dataset='AHRB',
 ):
     try:
         events = get_subdata_long(sub, dataset=dataset)
     except Exception as e:
         # this is bad practice in general, but we need to do it here
         # because this is wrapped in a delayed call in joblib
-        print(f"Error loading sub {sub}")
+        print(f'Error loading sub {sub}')
         print(e)
         return None
     if jitter:
@@ -824,7 +828,7 @@ def sim_data_est_cons_sub(
     designs = create_design_matrices(events, oversampling=oversampling, tr=tr)
     contrast_strings, contrasts_matrices, c_pinv_xmats = create_contrasts(designs)
     data = generate_data_nsim(
-        designs["Saturated"],
+        designs['Saturated'],
         beta_dict,
         nsims=nsims,
         noise_sd=noise_sd,
@@ -834,27 +838,27 @@ def sim_data_est_cons_sub(
     for desname, x_pinv_mat in c_pinv_xmats.items():
         contrast_ests[desname] = x_pinv_mat @ data
     output = {
-        "contrast_strings": contrast_strings,
-        "contrast_ests": contrast_ests,
-        "designs": designs,
+        'contrast_strings': contrast_strings,
+        'contrast_ests': contrast_ests,
+        'designs': designs,
     }
     return output
 
 
 def organize_sim_data_results(results):
-    contrast_strings = results[0]["contrast_strings"]
+    contrast_strings = results[0]['contrast_strings']
     all_contrast_ests_lists = {key: [] for key in contrast_strings.keys()}
     for result in results:
         if result is not None:
-            contrast_ests = result["contrast_ests"]
+            contrast_ests = result['contrast_ests']
             for desname in contrast_strings.keys():
                 all_contrast_ests_lists[desname].append(contrast_ests[desname])
 
     all_contrast_ests = {
         key: np.stack(val, axis=2) for key, val in all_contrast_ests_lists.items()
     }
-    nsims = all_contrast_ests["Saturated"].shape[1]
-    ouput_names = ["model", "contrast", "mean", "tval", "pval", "sigp"]
+    nsims = all_contrast_ests['Saturated'].shape[1]
+    ouput_names = ['model', 'contrast', 'mean', 'tval', 'pval', 'sigp']
     group_model_output = {output_name: [] for output_name in ouput_names}
     for model in contrast_strings.keys():
         for contrast_number, contrast_name in enumerate(contrast_strings[model].keys()):
@@ -865,34 +869,34 @@ def organize_sim_data_results(results):
                 all_contrast_ests[model][contrast_number, :, :],
                 0,
                 axis=1,
-                alternative="two-sided",
+                alternative='two-sided',
             )
             contrast_sigp = contrast_pval < 0.05
-            group_model_output["model"].extend([model] * nsims)
-            group_model_output["contrast"].extend([contrast_name] * nsims)
-            group_model_output["mean"].extend(contrast_mean)
-            group_model_output["tval"].extend(contrast_tval)
-            group_model_output["pval"].extend(contrast_pval)
-            group_model_output["sigp"].extend(contrast_sigp)
+            group_model_output['model'].extend([model] * nsims)
+            group_model_output['contrast'].extend([contrast_name] * nsims)
+            group_model_output['mean'].extend(contrast_mean)
+            group_model_output['tval'].extend(contrast_tval)
+            group_model_output['pval'].extend(contrast_pval)
+            group_model_output['sigp'].extend(contrast_sigp)
     group_model_output_df = pd.DataFrame(group_model_output)
     return group_model_output_df, contrast_strings
 
 
 def make_pow_error_column(results_df, beta_dict, contrast_strings):
     beta_dict_keys = list(beta_dict.keys())
-    beta_dict_keys = [val.replace(": ", "_") for val in beta_dict_keys]
-    models = results_df["model"].unique()
+    beta_dict_keys = [val.replace(': ', '_') for val in beta_dict_keys]
+    models = results_df['model'].unique()
 
-    results_df["plot_alpha_val_power_error"] = 0.5
+    results_df['plot_alpha_val_power_error'] = 0.5
     for model in models:
         contrasts_model = results_df.loc[
-            results_df["model"] == model, "contrast"
+            results_df['model'] == model, 'contrast'
         ].unique()
-        if model == "cue fix":
+        if model == 'cue fix':
             # for cue fix, both CUE_ and FIXATION_ betas add signal to CUEFIX_ beta
-            beta_dict_keys = [val.replace("CUE_", "CUEFIX_") for val in beta_dict_keys]
+            beta_dict_keys = [val.replace('CUE_', 'CUEFIX_') for val in beta_dict_keys]
             beta_dict_keys = [
-                val.replace("FIXATION_", "CUEFIX_") for val in beta_dict_keys
+                val.replace('FIXATION_', 'CUEFIX_') for val in beta_dict_keys
             ]
         for contrast_model in contrasts_model:
             contrast_loop = contrast_strings[model][contrast_model]
@@ -902,23 +906,23 @@ def make_pow_error_column(results_df, beta_dict, contrast_strings):
                     beta_keys_in_contrast.append(key)
             if len(beta_keys_in_contrast) > 0:
                 results_df.loc[
-                    (results_df["model"] == model)
-                    & (results_df["contrast"] == contrast_model),
-                    "plot_alpha_val_power_error",
+                    (results_df['model'] == model)
+                    & (results_df['contrast'] == contrast_model),
+                    'plot_alpha_val_power_error',
                 ] = 1
     return results_df
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == '__main__':  # pragma: no cover
     SUB = 1
-    DATASET = "testdata"
+    DATASET = 'testdata'
 
     events_df = get_events_df_for_subject(SUB, dataset=DATASET)
 
     events_long = get_subdata_long(SUB, dataset=DATASET, verbose=True)
     design_matrices = create_design_matrices(events_long, verbose=True)
 
-    simdata = generate_data_nsim(design_matrices["Saturated"], {})
+    simdata = generate_data_nsim(design_matrices['Saturated'], {})
 
     contrast_strings, contrast_matrices, c_pinv_xmats = create_contrasts(
         design_matrices
@@ -928,7 +932,7 @@ if __name__ == "__main__":  # pragma: no cover
     beta_dicts = get_beta_dicts()
     for beta_dict in beta_dicts:
         data = generate_data_nsim(
-            design_matrices["Saturated"],
+            design_matrices['Saturated'],
             beta_dict,
             nsims=nsims,
             noise_sd=1,

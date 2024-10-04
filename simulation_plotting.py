@@ -1,16 +1,7 @@
-import pandas as pd
-import numpy as np
-import os
-import seaborn as sns
 import matplotlib.pyplot as plt
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-import matplotlib.gridspec as gridspec
-
-from tqdm import tqdm
-from scipy.stats import ttest_1samp
-import pickle
-from collections import OrderedDict
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from nilearn.plotting import plot_design_matrix
 
 
@@ -80,10 +71,6 @@ def plot_contrast_estimates(results_df, hue_order, axs):
     axs.set_xlabel("Contrast")
     axs.set_ylabel("Group-level T-stats \n (opaque should have T-stats=0)")
     axs.tick_params(axis="x", rotation=90)
-    x_tick_label_location = {
-        text_obj.get_position()[0]: text_obj.get_text()
-        for text_obj in axs.get_xticklabels()
-    }
     x_labels_in_order = [text_obj.get_text() for text_obj in axs.get_xticklabels()]
     alpha_vec = []
     for contrast_name in x_labels_in_order:
@@ -146,10 +133,10 @@ def plot_dict_of_results(results_dict, contrasts=True):
         results_df_loop = results_dict[fig_label]
         contrast_rows = results_df_loop["contrast"].str.contains("-")
         if contrasts:
-            keep = contrast_rows == True
+            keep = contrast_rows
         if not contrasts:
-            keep = contrast_rows == False
-        results_df_loop = results_df_loop[(keep == True)]
+            keep = not contrast_rows
+        results_df_loop = results_df_loop[keep]
         models_included = results_df_loop["model"].unique()
         hue_order = ["Saturated", "CueYesDeriv", "CueNoDeriv"]
         hue_order = [model for model in hue_order if model in models_included]
@@ -168,9 +155,14 @@ def plot_design_ordered_regressors(desmat, desname, ax):
     return ax
 
 
-def plot_bias(results):
+def plot_bias(results, contrasts_only=False, omit_noderiv=False, jitter=False):
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
     cmap.set_bad("lightgrey")
+
+    if jitter:
+        title = "Bias (jittered ITI)"
+    else:
+        title = "Bias (no ITI)"
 
     num_plots = len(results.keys())
     f, axs = plt.subplots(
@@ -181,9 +173,13 @@ def plot_bias(results):
     )
     cbar_ax = f.add_axes([0.91, 0.4, 0.03, 0.5])
     f.suptitle(
-        "Bias \nAverage of group T-statistics across simulations \nBias occurs when values are nonzero",
+        f"{title} \nAverage of group T-statistics across simulations \nBias occurs when values are nonzero",
         fontsize=16,
     )
+    if contrasts_only:
+        omit_string = "Derivative|Cue:|Feedback:|Fixation:|Probe"
+    else:
+        omit_string = "Derivative"
     for idx, (setting, data) in enumerate(results.items()):
         data = data.copy()
         data.loc[data["plot_alpha_val_power_error"] == 1, "tval"] = np.nan
@@ -195,17 +191,69 @@ def plot_bias(results):
             .pivot(index="contrast", columns="model", values="tval")
             .transpose()
         )
-        # dat_plot = dat_plot[dat_plot.columns.drop(list(dat_plot.filter(regex="-")))]
         dat_plot = dat_plot[
-            dat_plot.columns.drop(list(dat_plot.filter(regex="Derivative")))
+            dat_plot.columns.drop(list(dat_plot.filter(regex=omit_string)))
         ]
-        # dat_plot = dat_plot[sorted(dat_plot.columns)]
+        if omit_noderiv:
+            dat_plot = dat_plot.loc[~dat_plot.index.str.contains("NoDeriv")]
         dat_plot = dat_plot[sorted(dat_plot.columns, key=lambda x: ("-" in x, x))]
         g = sns.heatmap(
             dat_plot,
             vmin=-0.5,
             vmax=1,
             center=0,
+            cbar=idx == 0,
+            cmap=cmap,
+            ax=axs[idx],
+            cbar_ax=None if idx else cbar_ax,
+            annot=True,
+            fmt=".2f",
+        )
+        if idx < num_plots - 1:
+            axs[idx].set_xlabel("")
+        axs[idx].set_ylabel(setting, rotation=0, labelpad=200, loc="bottom")
+    plt.show()
+
+
+def plot_error_grid(results, omit_noderiv=False, jitter=False):
+    cmap = sns.diverging_palette(220, 10, as_cmap=True)
+    cmap.set_bad("lightgrey")
+    if jitter:
+        title = "Type I error (jittered ITI)"
+    else:
+        title = "Type I error (no ITI)"
+    num_plots = len(results.keys())
+    f, axs = plt.subplots(
+        len(results.keys()),
+        1,  # gridspec_kw={'hspace': 0.5},
+        figsize=(20, 10),
+        sharex=True,
+    )
+    cbar_ax = f.add_axes([0.91, 0.4, 0.03, 0.5])
+    f.suptitle(f"{title}", fontsize=16)
+    for idx, (setting, data) in enumerate(results.items()):
+        data = data.copy()
+        data["sigp"] = data["sigp"].astype(float)
+        data.loc[data["plot_alpha_val_power_error"] == 1, "sigp"] = pd.NA
+        setting = setting.replace(", ", "\n")
+        dat_plot = (
+            data.groupby(["contrast", "model"])[["sigp"]]
+            .mean()
+            .reset_index()
+            .pivot(index="contrast", columns="model", values="sigp")
+            .transpose()
+        )
+        dat_plot = dat_plot[
+            dat_plot.columns.drop(list(dat_plot.filter(regex="Derivative")))
+        ]
+        if omit_noderiv:
+            dat_plot = dat_plot.loc[~dat_plot.index.str.contains("NoDeriv")]
+        dat_plot = dat_plot[sorted(dat_plot.columns, key=lambda x: ("-" in x, x))]
+        g = sns.heatmap(
+            dat_plot,
+            vmin=0,
+            vmax=1,
+            center=0.05,
             cbar=idx == 0,
             cmap=cmap,
             ax=axs[idx],

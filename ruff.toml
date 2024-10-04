@@ -1,0 +1,7 @@
+extend-include = ["*.ipynb"]
+
+[format]
+# Prefer single quotes over double quotes.
+quote-style = "single"
+
+
