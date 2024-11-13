@@ -12,27 +12,27 @@ def plot_proportion_sig(results_df, hue_order, axs_barplot):
     # should be correct.
     alpha_values = results_df.copy()
     alpha_values = alpha_values.drop(
-        ["mean", "tval", "pval", "sigp"], axis=1
+        ['mean', 'tval', 'pval', 'sigp'], axis=1
     ).drop_duplicates()
 
     sns.barplot(
         data=results_df,
-        x="contrast",
-        y="sigp",
-        hue="model",
+        x='contrast',
+        y='sigp',
+        hue='model',
         ax=axs_barplot,
         hue_order=hue_order,
-        order=results_df["contrast"],
+        order=results_df['contrast'],
     )
     x_tick_label_location = {
         text_obj.get_position()[0]: text_obj.get_text()
         for text_obj in axs_barplot.get_xticklabels()
     }
     axs_barplot.set_ylim(0, 1)
-    axs_barplot.axhline(0.05, color="red", linestyle="--")
-    axs_barplot.set_xlabel("Contrast")
-    axs_barplot.set_ylabel("Proportion significant \n (solid=power, opaque=error rate)")
-    axs_barplot.tick_params(axis="x", rotation=90)
+    axs_barplot.axhline(0.05, color='red', linestyle='--')
+    axs_barplot.set_xlabel('Contrast')
+    axs_barplot.set_ylabel('Proportion significant \n (solid=power, opaque=error rate)')
+    axs_barplot.tick_params(axis='x', rotation=90)
     # Change alpha of bars
     # axs.containers is a list (possibly of lists), where the
     # outer list refers to model and list within list is contrast
@@ -45,40 +45,40 @@ def plot_proportion_sig(results_df, hue_order, axs_barplot):
             contrast_name = x_tick_label_location[int(np.round(subcontainer.get_x()))]
             subcontainer.set_alpha(
                 alpha_values[
-                    (alpha_values["model"] == model_loop)
-                    & (alpha_values["contrast"] == contrast_name)
-                ]["plot_alpha_val_power_error"].values[0]
+                    (alpha_values['model'] == model_loop)
+                    & (alpha_values['contrast'] == contrast_name)
+                ]['plot_alpha_val_power_error'].values[0]
             )
 
 
 def plot_contrast_estimates(results_df, hue_order, axs):
     alpha_values = results_df.copy()
     alpha_values = alpha_values.drop(
-        ["mean", "tval", "pval", "sigp"], axis=1
+        ['mean', 'tval', 'pval', 'sigp'], axis=1
     ).drop_duplicates()
 
     sns.violinplot(
         data=results_df,
-        x="contrast",
-        y="tval",
-        hue="model",
+        x='contrast',
+        y='tval',
+        hue='model',
         ax=axs,
         inner=None,
         hue_order=hue_order,
         legend=False,
     )
-    axs.axhline(0.0, color="red", linestyle="--")
-    axs.set_xlabel("Contrast")
-    axs.set_ylabel("Group-level T-stats \n (opaque should have T-stats=0)")
-    axs.tick_params(axis="x", rotation=90)
+    axs.axhline(0.0, color='red', linestyle='--')
+    axs.set_xlabel('Contrast')
+    axs.set_ylabel('Group-level T-stats \n (opaque should have T-stats=0)')
+    axs.tick_params(axis='x', rotation=90)
     x_labels_in_order = [text_obj.get_text() for text_obj in axs.get_xticklabels()]
     alpha_vec = []
     for contrast_name in x_labels_in_order:
         for model in hue_order:
             subset_df = alpha_values[
-                (alpha_values["model"] == model)
-                & (alpha_values["contrast"] == contrast_name)
-            ]["plot_alpha_val_power_error"]
+                (alpha_values['model'] == model)
+                & (alpha_values['contrast'] == contrast_name)
+            ]['plot_alpha_val_power_error']
             if subset_df.shape[0] > 0:
                 alpha_vec.append(subset_df.values[0])
     for subcollection, alpha in zip(axs.collections, alpha_vec):
@@ -88,8 +88,8 @@ def plot_contrast_estimates(results_df, hue_order, axs):
 def plot_results(results_df, analysis_label, stacked=False):
     # my method for changing alpha of the bars is a little hacky
     # and it may not be stable.
-    models_included = results_df["model"].unique()
-    hue_order = ["Saturated", "CueYesDeriv", "CueNoDeriv"]
+    models_included = results_df['model'].unique()
+    hue_order = ['Saturated', 'CueYesDeriv', 'CueNoDeriv']
     hue_order = [model for model in hue_order if model in models_included]
     if stacked:
         fig, axs = plt.subplots(2, 1, figsize=(25, 15))
@@ -103,7 +103,7 @@ def plot_results(results_df, analysis_label, stacked=False):
     plt.show()
 
 
-def plot_dict_of_results(results_dict, contrasts=True):
+def plot_dict_of_results(results_dict, contrasts=True, fig_path=None):
     num_plot_pairs = len(results_dict.keys())
     nrows = int(np.ceil(num_plot_pairs / 2))
     ncols = int(num_plot_pairs / nrows)
@@ -131,17 +131,19 @@ def plot_dict_of_results(results_dict, contrasts=True):
 
         outer_flat[i].suptitle(fig_label, fontsize=15, y=1.05)
         results_df_loop = results_dict[fig_label]
-        contrast_rows = results_df_loop["contrast"].str.contains("-")
+        contrast_rows = results_df_loop['contrast'].str.contains('-')
         if contrasts:
             keep = contrast_rows
         if not contrasts:
             keep = not contrast_rows
         results_df_loop = results_df_loop[keep]
-        models_included = results_df_loop["model"].unique()
-        hue_order = ["Saturated", "CueYesDeriv", "CueNoDeriv"]
+        models_included = results_df_loop['model'].unique()
+        hue_order = ['Saturated', 'CueYesDeriv', 'CueNoDeriv']
         hue_order = [model for model in hue_order if model in models_included]
         plot_proportion_sig(results_df_loop, hue_order, inner[0])
         plot_contrast_estimates(results_df_loop, hue_order, inner[1])
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches='tight')
     plt.show()
 
 
@@ -155,100 +157,169 @@ def plot_design_ordered_regressors(desmat, desname, ax):
     return ax
 
 
-def plot_bias(results, contrasts_only=False, omit_noderiv=False, jitter=False):
+def plot_bias(
+    results,
+    contrasts_only=False,
+    omit_noderiv=False,
+    jitter=False,
+    fig_path=None,
+    newname_cue_yes_deriv=None,
+    nsubs=500,
+):
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
-    cmap.set_bad("lightgrey")
+    cmap.set_bad('lightgrey')
 
     if jitter:
-        title = "Bias (jittered ITI)"
+        title = 'Bias (jittered ITI)'
     else:
-        title = "Bias (no ITI)"
+        title = 'Bias'
 
-    num_plots = len(results.keys())
+    bigfont = 14
+    smallfont1 = 10
+    smallfont2 = 10
+    fig_width = 8
+    rotate_xlab = 20
+    if not contrasts_only:
+        smallfont2 = 5
+        fig_width = 8
+        rotate_xlab = 90
+
     f, axs = plt.subplots(
         len(results.keys()),
         1,  # gridspec_kw={'hspace': 0.5},
-        figsize=(20, 10),
+        figsize=(fig_width, 10),
         sharex=True,
     )
-    cbar_ax = f.add_axes([0.91, 0.4, 0.03, 0.5])
+    cbar_ax = f.add_axes([0.91, 0.2, 0.03, 0.5])
     f.suptitle(
-        f"{title} \nAverage of group T-statistics across simulations \nBias occurs when values are nonzero",
-        fontsize=16,
+        f"{title} \nAverage of group Cohen's Ds across simulations \nBias occurs when values are nonzero",
+        fontsize=bigfont,
     )
     if contrasts_only:
-        omit_string = "Derivative|Cue:|Feedback:|Fixation:|Probe"
+        omit_string = '^((?!-).)*$'
     else:
-        omit_string = "Derivative"
+        omit_string = None
+
     for idx, (setting, data) in enumerate(results.items()):
         data = data.copy()
-        data.loc[data["plot_alpha_val_power_error"] == 1, "tval"] = np.nan
-        setting = setting.replace(", ", "\n")
+        if newname_cue_yes_deriv is not None:
+            data.loc[data['model'] == 'CueYesDeriv', 'model'] = newname_cue_yes_deriv
+        data.loc[data['plot_alpha_val_power_error'] == 1, 'tval'] = np.nan
+        setting = setting.replace(', ', '\n')
+        # add extra blank lines when needed for aesthetics
+        if len(setting.split('\n')) < 3:
+            setting += '\n   ' * (3 - len(setting.split('\n')))
         dat_plot = (
-            data.groupby(["contrast", "model"])[["tval"]]
+            data.groupby(['contrast', 'model'])[['tval']]
             .mean()
             .reset_index()
-            .pivot(index="contrast", columns="model", values="tval")
+            .pivot(index='contrast', columns='model', values='tval')
             .transpose()
         )
-        dat_plot = dat_plot[
-            dat_plot.columns.drop(list(dat_plot.filter(regex=omit_string)))
-        ]
+        dat_plot = dat_plot / np.sqrt(nsubs)
+        dat_plot = dat_plot[dat_plot.columns.drop(list(dat_plot.filter(regex='Deriv')))]
+        if omit_string:
+            dat_plot = dat_plot[
+                dat_plot.columns.drop(list(dat_plot.filter(regex=omit_string)))
+            ]
         if omit_noderiv:
-            dat_plot = dat_plot.loc[~dat_plot.index.str.contains("NoDeriv")]
-        dat_plot = dat_plot[sorted(dat_plot.columns, key=lambda x: ("-" in x, x))]
+            dat_plot = dat_plot.loc[
+                ~dat_plot.index.str.contains('NoDeriv|SaturatedDeriv')
+            ]
+        else:
+            dat_plot = dat_plot.loc[~dat_plot.index.str.contains('SaturatedDeriv')]
+        dat_plot = dat_plot[sorted(dat_plot.columns, key=lambda x: ('-' in x, x))]
         g = sns.heatmap(
             dat_plot,
-            vmin=-0.5,
-            vmax=1,
+            vmin=-0.01,
+            vmax=0.05,
             center=0,
             cbar=idx == 0,
             cmap=cmap,
             ax=axs[idx],
             cbar_ax=None if idx else cbar_ax,
             annot=True,
-            fmt=".2f",
+            fmt='.2f',
+            annot_kws={'fontsize': smallfont2},
         )
-        if idx < num_plots - 1:
-            axs[idx].set_xlabel("")
-        axs[idx].set_ylabel(setting, rotation=0, labelpad=200, loc="bottom")
+        g.set_yticklabels(g.get_yticklabels(), size=smallfont1, rotation=0)
+        g.set_xticklabels(g.get_xticklabels(), size=smallfont1, rotation=rotate_xlab)
+        # if idx < num_plots - 1:
+        axs[idx].set_xlabel('')
+        axs[idx].set_ylabel(
+            setting, rotation=0, labelpad=170, loc='bottom', fontsize=smallfont1
+        )
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches='tight')
     plt.show()
 
 
-def plot_error_grid(results, omit_noderiv=False, jitter=False):
+def plot_error_grid(
+    results,
+    contrasts_only=False,
+    omit_noderiv=False,
+    jitter=False,
+    fig_path=None,
+    newname_cue_yes_deriv=None,
+):
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
-    cmap.set_bad("lightgrey")
+    cmap.set_bad('lightgrey')
     if jitter:
-        title = "Type I error (jittered ITI)"
+        title = 'Type I error (jittered ITI)'
     else:
-        title = "Type I error (no ITI)"
+        title = 'Type I error'
     num_plots = len(results.keys())
+    bigfont = 14
+    smallfont1 = 10
+    smallfont2 = 10
+    fig_width = 8
+    rotate_xlab = 20
+    if not contrasts_only:
+        smallfont2 = 5
+        fig_width = 8
+        rotate_xlab = 90
+
     f, axs = plt.subplots(
-        len(results.keys()),
+        num_plots,
         1,  # gridspec_kw={'hspace': 0.5},
-        figsize=(20, 10),
+        figsize=(fig_width, 10),
         sharex=True,
     )
-    cbar_ax = f.add_axes([0.91, 0.4, 0.03, 0.5])
-    f.suptitle(f"{title}", fontsize=16)
+    cbar_ax = f.add_axes([0.91, 0.2, 0.03, 0.5])
+    f.suptitle(f'{title}', fontsize=16)
+    if contrasts_only:
+        omit_string = '^((?!-).)*$'
+    else:
+        omit_string = None
     for idx, (setting, data) in enumerate(results.items()):
         data = data.copy()
-        data["sigp"] = data["sigp"].astype(float)
-        data.loc[data["plot_alpha_val_power_error"] == 1, "sigp"] = pd.NA
-        setting = setting.replace(", ", "\n")
+        if newname_cue_yes_deriv is not None:
+            data.loc[data['model'] == 'CueYesDeriv', 'model'] = newname_cue_yes_deriv
+        data['sigp'] = data['sigp'].astype(float)
+        data.loc[data['plot_alpha_val_power_error'] == 1, 'sigp'] = pd.NA
+        setting = setting.replace(', ', '\n')
+        # add extra blank lines when needed for aesthetics
+        if len(setting.split('\n')) < 3:
+            setting += '\n   ' * (3 - len(setting.split('\n')))
         dat_plot = (
-            data.groupby(["contrast", "model"])[["sigp"]]
+            data.groupby(['contrast', 'model'])[['sigp']]
             .mean()
             .reset_index()
-            .pivot(index="contrast", columns="model", values="sigp")
+            .pivot(index='contrast', columns='model', values='sigp')
             .transpose()
         )
-        dat_plot = dat_plot[
-            dat_plot.columns.drop(list(dat_plot.filter(regex="Derivative")))
-        ]
+        dat_plot = dat_plot[dat_plot.columns.drop(list(dat_plot.filter(regex='Deriv')))]
+        if omit_string:
+            dat_plot = dat_plot[
+                dat_plot.columns.drop(list(dat_plot.filter(regex=omit_string)))
+            ]
         if omit_noderiv:
-            dat_plot = dat_plot.loc[~dat_plot.index.str.contains("NoDeriv")]
-        dat_plot = dat_plot[sorted(dat_plot.columns, key=lambda x: ("-" in x, x))]
+            dat_plot = dat_plot.loc[
+                ~dat_plot.index.str.contains('NoDeriv|SaturatedDeriv')
+            ]
+        else:
+            dat_plot = dat_plot.loc[~dat_plot.index.str.contains('SaturatedDeriv')]
+        dat_plot = dat_plot[sorted(dat_plot.columns, key=lambda x: ('-' in x, x))]
         g = sns.heatmap(
             dat_plot,
             vmin=0,
@@ -259,9 +330,155 @@ def plot_error_grid(results, omit_noderiv=False, jitter=False):
             ax=axs[idx],
             cbar_ax=None if idx else cbar_ax,
             annot=True,
-            fmt=".2f",
+            fmt='.2f',
+            annot_kws={'fontsize': smallfont2},
         )
-        if idx < num_plots - 1:
-            axs[idx].set_xlabel("")
-        axs[idx].set_ylabel(setting, rotation=0, labelpad=200, loc="bottom")
+        g.set_yticklabels(g.get_yticklabels(), size=smallfont1, rotation=0)
+        g.set_xticklabels(g.get_xticklabels(), size=smallfont1, rotation=rotate_xlab)
+        # if idx < num_plots - 1:
+        axs[idx].set_xlabel('')
+        axs[idx].set_ylabel(
+            setting, rotation=0, labelpad=170, loc='bottom', fontsize=smallfont1
+        )
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches='tight')
+    plt.show()
+
+
+def get_sim_set_con_significant(data, omit_string, omit_noderiv):
+    # Get number of simulations from data
+    first_con = data['contrast'].unique()[0]
+    first_model = data['model'].unique()[0]
+    nsims = data[
+        (data['contrast'] == first_con) & (data['model'] == first_model)
+    ].shape[0]
+    sig_prop_cutoff = 0.07
+    dat_sig = (
+        data.groupby(['contrast', 'model'])[['sigp']]
+        .mean()
+        .reset_index()
+        .pivot(index='contrast', columns='model', values='sigp')
+        .transpose()
+    )
+    dat_sig = dat_sig[dat_sig.columns.drop(list(dat_sig.filter(regex=omit_string)))]
+    if omit_noderiv:
+        dat_sig = dat_sig.loc[~dat_sig.index.str.contains('NoDeriv|SaturatedDeriv')]
+    else:
+        dat_sig = dat_sig.loc[~dat_sig.index.str.contains('SaturatedDeriv')]
+    dat_sig = dat_sig[sorted(dat_sig.columns, key=lambda x: ('-' in x, x))]
+    rows, cols = np.where(dat_sig.values > sig_prop_cutoff)
+    dat_sig_loc_tuples = [(cols[i], rows[i]) for i in range(len(rows))]
+    return dat_sig_loc_tuples
+
+
+def plot_bias_significance(
+    results,
+    contrasts_only=False,
+    omit_noderiv=False,
+    jitter=False,
+    fig_path=None,
+    newname_cue_yes_deriv=None,
+    nsubs=500,
+):
+    cmap = sns.diverging_palette(220, 10, as_cmap=True)
+    cmap.set_bad('lightgrey')
+
+    if jitter:
+        title = 'Bias (jittered ITI)'
+    else:
+        title = 'Bias'
+
+    bigfont = 14
+    smallfont1 = 10
+    smallfont2 = 10
+    fig_width = 8
+    rotate_xlab = 20
+    if not contrasts_only:
+        smallfont2 = 5
+        fig_width = 8
+        rotate_xlab = 90
+
+    f, axs = plt.subplots(
+        len(results.keys()),
+        1,  # gridspec_kw={'hspace': 0.5},
+        figsize=(fig_width, 10),
+        sharex=True,
+    )
+    cbar_ax = f.add_axes([0.91, 0.2, 0.03, 0.5])
+    f.suptitle(
+        f"{title} \nAverage of group Cohen's Ds across simulations \nBias occurs when values are nonzero",
+        fontsize=bigfont,
+    )
+    if contrasts_only:
+        omit_string = '^((?!-).)*$'
+    else:
+        omit_string = None
+    for idx, (setting, data) in enumerate(results.items()):
+        data = data.copy()
+        if newname_cue_yes_deriv is not None:
+            data.loc[data['model'] == 'CueYesDeriv', 'model'] = newname_cue_yes_deriv
+        data.loc[data['plot_alpha_val_power_error'] == 1, 'tval'] = np.nan
+        data['sigp'] = data['sigp'].astype(float)
+        data.loc[data['plot_alpha_val_power_error'] == 1, 'sigp'] = pd.NA
+
+        setting = setting.replace(', ', '\n')
+        # add extra blank lines when needed for aesthetics
+        if len(setting.split('\n')) < 3:
+            setting += '\n   ' * (3 - len(setting.split('\n')))
+        dat_plot = (
+            data.groupby(['contrast', 'model'])[['tval']]
+            .mean()
+            .reset_index()
+            .pivot(index='contrast', columns='model', values='tval')
+            .transpose()
+        )
+        dat_plot = dat_plot / np.sqrt(nsubs)
+        dat_plot = dat_plot[dat_plot.columns.drop(list(dat_plot.filter(regex='Deriv')))]
+        if omit_string:
+            dat_plot = dat_plot[
+                dat_plot.columns.drop(list(dat_plot.filter(regex=omit_string)))
+            ]
+        if omit_noderiv:
+            dat_plot = dat_plot.loc[
+                ~dat_plot.index.str.contains('NoDeriv|SaturatedDeriv')
+            ]
+        else:
+            dat_plot = dat_plot.loc[~dat_plot.index.str.contains('SaturatedDeriv')]
+        dat_plot = dat_plot[sorted(dat_plot.columns, key=lambda x: ('-' in x, x))]
+        sig_cells = get_sim_set_con_significant(data, omit_string, omit_noderiv)
+        g = sns.heatmap(
+            dat_plot,
+            vmin=-0.01,
+            vmax=0.05,
+            center=0,
+            cbar=idx == 0,
+            cmap=cmap,
+            ax=axs[idx],
+            cbar_ax=None if idx else cbar_ax,
+            annot=True,
+            fmt='.2f',
+            annot_kws={'fontsize': smallfont2},
+        )
+        for sig_cell in sig_cells:
+            fix_val = 0.02
+            sig_cell = (sig_cell[0] + 0.015, sig_cell[1] + fix_val)
+            g.add_patch(
+                plt.Rectangle(
+                    sig_cell,
+                    1 - 0.028,
+                    1 - fix_val / 2,
+                    ec='#433e3d',
+                    fc='none',
+                    lw=4,
+                )
+            )
+        g.set_yticklabels(g.get_yticklabels(), size=smallfont1, rotation=0)
+        g.set_xticklabels(g.get_xticklabels(), size=smallfont1, rotation=rotate_xlab)
+        # if idx < num_plots - 1:
+        axs[idx].set_xlabel('')
+        axs[idx].set_ylabel(
+            setting, rotation=0, labelpad=170, loc='bottom', fontsize=smallfont1
+        )
+    if fig_path is not None:
+        plt.savefig(fig_path, bbox_inches='tight')
     plt.show()

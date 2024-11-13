@@ -9,15 +9,14 @@ from joblib import Parallel, delayed
 from nilearn.glm import expression_to_contrast_vector
 from nilearn.glm.first_level.hemodynamic_models import spm_hrf, spm_time_derivative
 from scipy.stats import gamma, ttest_1samp
-from statsmodels.stats.outliers_influence import variance_inflation_factor
 
 
 def get_beta_dicts(dataset='AHRB'):
     if (dataset == 'AHRB') or (dataset == 'testdata'):
         beta_dicts = [
             {},
-            {'Cue: LargeWin': 0.3, 'Cue: SmallWin': 0.3},
-            {'Fixation: LargeWin': 0.3, 'Fixation: SmallWin': 0.3},
+            {'Cue: LargeWin': 0.2, 'Cue: SmallWin': 0.2},
+            {'Fixation: LargeWin': 0.2, 'Fixation: SmallWin': 0.2},
             {
                 'Cue: LargeWin': 0.3,
                 'Cue: SmallWin': 0.3,
@@ -31,33 +30,41 @@ def get_beta_dicts(dataset='AHRB'):
     elif dataset == 'ABCD':
         beta_dicts = [
             {},
-            {'Cue: LargeWin': 0.3, 'Cue: SmallWin': 0.3},
-            {'Fixation: LargeWin': 0.3, 'Fixation: SmallWin': 0.3},
-            {
-                'Cue: LargeWin': 0.3,
-                'Cue: SmallWin': 0.3,
-                'Fixation: LargeWin': 0.3,
-                'Fixation: SmallWin': 0.3,
-            },
-            {'Probe': 1.25},
-            {'Probe: RT': 0.75},
-            {'Feedback: LargeWinHit': 0.4, 'Feedback: SmallWinHit': 0.4},
-            {'Feedback: LargeWinHit': 0.2, 'Feedback: LargeWinMiss': -0.2},
+            {'Cue: LargeWin': 0.15, 'Cue: SmallWin': 0.15},
+            {'Fixation: LargeWin': 0.15, 'Fixation: SmallWin': 0.15},
+            # {
+            #     'Cue: LargeWin': 0.15,
+            #     'Cue: SmallWin': 0.15,
+            #     'Fixation: LargeWin': 0.15,
+            #     'Fixation: SmallWin': 0.15,
+            # },
+            {'Probe': 0.55},
+            {'Probe: RT': 0.3},
+            # {
+            #     'Cue: LargeWin': 0.15,
+            #     'Cue: SmallWin': 0.15,
+            #     'Fixation: LargeWin': 0.15,
+            #     'Fixation: SmallWin': 0.15,
+            #     'Probe': 0.5,
+            #     'Probe: RT': 0.3,
+            # },
+            {'Feedback: LargeWinHit': 0.18, 'Feedback: SmallWinHit': 0.18},
+            # {'Feedback: LargeWinHit': 0.09, 'Feedback: LargeWinMiss': -0.09},
         ]
     return beta_dicts
 
 
 desmat_column_rename = {
     'CUE_LargeGain': 'Cue: LargeWin',
-    'CUE_LargeGain_derivative': 'Cue: LargeWin Derivative',
+    'CUE_LargeGain_derivative': 'Cue: LargeWin Deriv',
     'CUE_LargeLoss': 'Cue: LargeLoss',
-    'CUE_LargeLoss_derivative': 'Cue: LargeLoss Derivative',
+    'CUE_LargeLoss_derivative': 'Cue: LargeLoss Deriv',
     'CUE_NoMoneyStake': 'Cue: Neutral',
-    'CUE_NoMoneyStake_derivative': 'Cue: Neutral Derivative',
+    'CUE_NoMoneyStake_derivative': 'Cue: Neutral Deriv',
     'CUE_SmallGain': 'Cue: SmallWin',
-    'CUE_SmallGain_derivative': 'Cue: SmallWin Derivative',
+    'CUE_SmallGain_derivative': 'Cue: SmallWin Deriv',
     'CUE_SmallLoss': 'Cue: SmallLoss',
-    'CUE_SmallLoss_derivative': 'Cue: SmallLoss Derivative',
+    'CUE_SmallLoss_derivative': 'Cue: SmallLoss Deriv',
     'FIXATION_LargeGain': 'Fixation: LargeWin',
     'FIXATION_LargeLoss': 'Fixation: LargeLoss',
     'FIXATION_NoMoneyStake': 'Fixation: Neutral',
@@ -75,16 +82,16 @@ desmat_column_rename = {
     'FEEDBACK_MISS_NoMoneyStake': 'Feedback: NeutralMiss',
     'FEEDBACK_MISS_SmallGain': 'Feedback: SmallWinMiss',
     'FEEDBACK_MISS_SmallLoss': 'Feedback: SmallLossMiss',
-    'FEEDBACK_HIT_LargeGain_derivative': 'Feedback: LargeWinHit Derivative',
-    'FEEDBACK_HIT_LargeLoss_derivative': 'Feedback: LargeLossHit Derivative',
-    'FEEDBACK_HIT_NoMoneyStake_derivative': 'Feedback: NeutralHit Derivative',
-    'FEEDBACK_HIT_SmallGain_derivative': 'Feedback: SmallWinHit Derivative',
-    'FEEDBACK_HIT_SmallLoss_derivative': 'Feedback: SmallLossHit Derivative',
-    'FEEDBACK_MISS_LargeGain_derivative': 'Feedback: LargeWinMiss Derivative',
-    'FEEDBACK_MISS_LargeLoss_derivative': 'Feedback: LargeLossMiss Derivative',
-    'FEEDBACK_MISS_NoMoneyStake_derivative': 'Feedback: NeutralMiss Derivative',
-    'FEEDBACK_MISS_SmallGain_derivative': 'Feedback: SmallWinMiss Derivative',
-    'FEEDBACK_MISS_SmallLoss_derivative': 'Feedback: SmallLossMiss Derivative',
+    'FEEDBACK_HIT_LargeGain_derivative': 'Feedback: LargeWinHit Deriv',
+    'FEEDBACK_HIT_LargeLoss_derivative': 'Feedback: LargeLossHit Deriv',
+    'FEEDBACK_HIT_NoMoneyStake_derivative': 'Feedback: NeutralHit Deriv',
+    'FEEDBACK_HIT_SmallGain_derivative': 'Feedback: SmallWinHit Deriv',
+    'FEEDBACK_HIT_SmallLoss_derivative': 'Feedback: SmallLossHit Deriv',
+    'FEEDBACK_MISS_LargeGain_derivative': 'Feedback: LargeWinMiss Deriv',
+    'FEEDBACK_MISS_LargeLoss_derivative': 'Feedback: LargeLossMiss Deriv',
+    'FEEDBACK_MISS_NoMoneyStake_derivative': 'Feedback: NeutralMiss Deriv',
+    'FEEDBACK_MISS_SmallGain_derivative': 'Feedback: SmallWinMiss Deriv',
+    'FEEDBACK_MISS_SmallLoss_derivative': 'Feedback: SmallLossMiss Deriv',
 }
 
 
@@ -330,7 +337,9 @@ def create_design_matrix(
     return desmtx_conv
 
 
-def create_design_matrices(events_df_long, oversampling=5, tr=1, verbose=False):
+def create_design_matrices(
+    events_df_long, oversampling=5, tr=1, gen_saturated_deriv=False, verbose=False
+):
     all_designs = {}
     all_designs['Saturated'] = create_design_matrix(
         events_df_long,
@@ -339,6 +348,14 @@ def create_design_matrices(events_df_long, oversampling=5, tr=1, verbose=False):
         verbose=verbose,
         add_deriv=False,
     )
+    if gen_saturated_deriv:
+        all_designs['SaturatedDeriv'] = create_design_matrix(
+            events_df_long,
+            oversampling=oversampling,
+            tr=tr,
+            verbose=verbose,
+            add_deriv=True,
+        )
     events_df_long_cue_imp = events_df_long[
         events_df_long['trial_type'].str.contains('CUE|FEEDBACK')
     ].copy()
@@ -582,13 +599,13 @@ def create_contrasts(designs):
             for colname in design_columns
             if 'constant' not in colname
         }
-        contrasts_strings[desname]['CUE: W-base'] = (
+        contrasts_strings[desname]['Cue: W-base'] = (
             '.5 * Cue_LargeWin  + .5 * Cue_SmallWin'
         )
-        contrasts_strings[desname]['CUE: W-Neut'] = (
+        contrasts_strings[desname]['Cue: W-Neut'] = (
             '.5 * Cue_LargeWin  + .5 * Cue_SmallWin - 1 * Cue_Neutral'
         )
-        contrasts_strings[desname]['CUE: LW-Neut'] = (
+        contrasts_strings[desname]['Cue: LW-Neut'] = (
             '1 * Cue_LargeWin - 1 * Cue_Neutral'
         )
         contrasts_strings[desname]['FB: WHit-NeutHit'] = (
@@ -625,18 +642,42 @@ def est_efficiencies(designs, contrast_matrices):
     return efficiencies
 
 
-def est_vifs(designs):
+def est_des_covs(designs):
+    """
+    Estimate the pairwise covariances between regressors for all designs
+    """
+    cov_mats = {}
+    for desname, desmat in designs.items():
+        cov_mats[desname] = desmat.cov()
+    return cov_mats
+
+
+def est_vifs(designs, contrast_matrices):
     """
     Estimate the variance inflation factor (VIF) for the designs
     """
     vifs = {}
     for desname, desmat in designs.items():
-        vifs[desname] = np.array(
-            [
-                variance_inflation_factor(desmat.values, i)
-                for i in range(len(desmat.columns))
-            ]
+        desmat_centered_scaled = desmat.copy()
+        column_keep = desmat_centered_scaled.std() != 0
+        desmat_centered_scaled = desmat_centered_scaled.loc[:, column_keep]
+        desmat_centered_scaled = (
+            desmat_centered_scaled - desmat_centered_scaled.mean()
+        ) / desmat_centered_scaled.std()
+        contrast_mat = contrast_matrices[desname][:, column_keep]
+
+        worst_case_covmat = np.linalg.pinv(
+            desmat_centered_scaled.transpose() @ desmat_centered_scaled
         )
+        best_case_covmat = np.linalg.pinv(
+            np.multiply(
+                desmat_centered_scaled.transpose() @ desmat_centered_scaled,
+                np.identity(desmat_centered_scaled.shape[1]),
+            )
+        )
+        vifs[desname] = np.diag(
+            contrast_mat @ worst_case_covmat @ contrast_mat.transpose()
+        ) / np.diag((contrast_mat @ best_case_covmat @ contrast_mat.transpose()))
     return vifs
 
 
@@ -644,7 +685,9 @@ def est_baseline_max_range(events, oversampling=50, tr=0.8):
     avg_durations = events.groupby('trial_type')['duration'].mean().reset_index()
     avg_durations.columns = ['trial_type', 'duration']
     avg_durations['onset'] = 10
-    designs = create_design_matrices(avg_durations, oversampling=oversampling, tr=tr)
+    designs = create_design_matrices(
+        avg_durations, oversampling=oversampling, tr=tr, gen_saturated_deriv=True
+    )
     base_max_ranges = {}
     for desname, desmat in designs.items():
         base_max_ranges[desname] = desmat.max()
@@ -667,12 +710,61 @@ def est_eff_vif_all_subs(
     jitter_iti_min=2,
     jitter_iti_max=6,
     dataset='AHRB',
+    nsubs=108,
 ):
     """
     Estimate the efficiency and variance inflation factor (VIF) for all subjects
     """
     # Placeholder for results
-    for sub in range(1, 109):
+    for sub in range(1, nsubs + 1):
+        events = None
+        try:
+            events = get_subdata_long(sub, dataset=dataset)
+        except Exception as e:
+            print(f'Error loading sub {sub}: {e}')
+            continue
+        if jitter:
+            events = insert_jitter(
+                events, min_iti=jitter_iti_min, max_iti=jitter_iti_max
+            )
+
+        designs = create_design_matrices(
+            events, oversampling=oversampling, tr=tr, gen_saturated_deriv=True
+        )
+        base_max_ranges = est_baseline_max_range(
+            events, oversampling=oversampling, tr=tr
+        )
+        # should make efficiencies comparable
+        designs = scale_regressors(base_max_ranges, designs)
+        if sub == 1:
+            efficiencies = {model: [] for model in designs.keys()}
+            vifs = {model: [] for model in designs.keys()}
+        contrast_strings, contrast_matrices, c_pinv_xmats = create_contrasts(designs)
+        efficiencies_loop = est_efficiencies(designs, contrast_matrices)
+        vifs_loop = est_vifs(designs, contrast_matrices)
+        for key in efficiencies.keys():
+            efficiencies[key].append(efficiencies_loop[key])
+            vifs[key].append(vifs_loop[key])
+    eff_output, vif_output = organize_vifs_effs(
+        efficiencies, vifs, contrast_strings, designs
+    )
+    return {'efficiencies': eff_output, 'vifs': vif_output}
+
+
+def est_des_covmats_all_subs(
+    oversampling=50,
+    tr=0.8,
+    jitter=False,
+    jitter_iti_min=2,
+    jitter_iti_max=6,
+    dataset='AHRB',
+    nsubs=108,
+):
+    """
+    Estimate the efficiency and variance inflation factor (VIF) for all subjects
+    """
+    # Placeholder for results
+    for sub in range(1, nsubs + 1):
         events = None
         try:
             events = get_subdata_long(sub, dataset=dataset)
@@ -685,24 +777,15 @@ def est_eff_vif_all_subs(
             )
 
         designs = create_design_matrices(events, oversampling=oversampling, tr=tr)
-        base_max_ranges = est_baseline_max_range(
-            events, oversampling=oversampling, tr=tr
-        )
-        # should make efficiencies comparable
-        designs = scale_regressors(base_max_ranges, designs)
         if sub == 1:
-            efficiencies = {model: [] for model in designs.keys()}
-            vifs = {model: [] for model in designs.keys()}
-        contrast_strings, contrast_matrices, c_pinv_xmats = create_contrasts(designs)
-        efficiencies_loop = est_efficiencies(designs, contrast_matrices)
-        vifs_loop = est_vifs(designs)
-        for key in efficiencies.keys():
-            efficiencies[key].append(efficiencies_loop[key])
-            vifs[key].append(vifs_loop[key])
-        eff_output, vif_output = organize_vifs_effs(
-            efficiencies, vifs, contrast_strings, designs
-        )
-    return {'efficiencies': eff_output, 'vifs': vif_output}
+            covmats = {model: [] for model in designs.keys()}
+        covmats_loop = est_des_covs(designs)
+        for key in covmats.keys():
+            covmats[key].append(covmats_loop[key])
+        covmat_avg = {}
+        for key in covmats.keys():
+            covmat_avg[key] = sum(covmats[key]) / len(covmats[key])
+    return covmat_avg
 
 
 def organize_vifs_effs(efficiencies, vifs, contrast_strings, designs):
@@ -719,7 +802,7 @@ def organize_vifs_effs(efficiencies, vifs, contrast_strings, designs):
         )
         vif_output[key] = pd.DataFrame(
             vifs[key].transpose(),
-            columns=designs[key].columns,
+            columns=contrast_strings[key].keys(),
         )
         eff_output[key] = pd.melt(
             eff_output[key], var_name='contrast', value_name='efficiency'
