@@ -352,7 +352,7 @@ def get_sim_set_con_significant(data, omit_string, omit_noderiv):
     nsims = data[
         (data['contrast'] == first_con) & (data['model'] == first_model)
     ].shape[0]
-    sig_prop_cutoff = 0.07
+    sig_prop_cutoff = 0.066
     dat_sig = (
         data.groupby(['contrast', 'model'])[['sigp']]
         .mean()
