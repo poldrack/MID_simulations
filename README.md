@@ -10,7 +10,7 @@ cd MID_simulations
 uv sync
 ```
 
-The code that generates results and figures from simulation portion of the manuscript is contained in the notebooks in `manuscript_code`.  It relies on timing files from the ABCD data set, which cannot be shared here.
+The code that generates results and figures from simulation portion of the manuscript is contained in the notebooks in `manuscript_code`.  It relies on timing files from the ABCD data set, which cannot be shared here.  If you would like to run the code and do not have the ABCD data, you can instead use the AHRB data files, which are included.  Simply change the variable `dataset` to `dataset = 'AHRB'` within the notebook.
 
 If using Jupyter, you can start a Jupyter server with access to this project's virtual environment using:
 ```
