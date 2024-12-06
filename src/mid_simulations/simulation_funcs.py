@@ -124,7 +124,7 @@ def get_events_df_for_subject(sub, dataset='AHRB', verbose=False):
     events_df = None
     maxtime = None
     for run in [1, 2]:
-        eventfile = f'{dataset}/sub-{sub}/ses-1/func/sub-{sub}_ses-1_task-mid_run-0{run}_events.tsv'
+        eventfile = f'../{dataset}/sub-{sub}/ses-1/func/sub-{sub}_ses-1_task-mid_run-0{run}_events.tsv'
         df = load_event_file(eventfile, verbose)
         if events_df is None:
             events_df = df
@@ -830,7 +830,7 @@ def make_analysis_label(beta_dict, jitter=False, jitter_iti_min=2, jitter_iti_ma
 
 
 def get_subids(dataset='AHRB'):
-    subdirs = glob(f'{dataset}/sub*')
+    subdirs = glob(f'../{dataset}/sub*')
     subids = [string_val.split('-', 1)[1] for string_val in subdirs]
     return subids
 
