@@ -1,5 +1,6 @@
 # functions for simulations
 
+import importlib.resources
 import multiprocessing
 from glob import glob
 
@@ -9,6 +10,8 @@ from joblib import Parallel, delayed
 from nilearn.glm import expression_to_contrast_vector
 from nilearn.glm.first_level.hemodynamic_models import spm_hrf, spm_time_derivative
 from scipy.stats import gamma, ttest_1samp
+
+data_path = importlib.resources.files('mid_simulations')
 
 
 def get_beta_dicts(dataset='AHRB'):
@@ -124,7 +127,7 @@ def get_events_df_for_subject(sub, dataset='AHRB', verbose=False):
     events_df = None
     maxtime = None
     for run in [1, 2]:
-        eventfile = f'../{dataset}/sub-{sub}/ses-1/func/sub-{sub}_ses-1_task-mid_run-0{run}_events.tsv'
+        eventfile = f'{data_path}/{dataset}/sub-{sub}/ses-1/func/sub-{sub}_ses-1_task-mid_run-0{run}_events.tsv'
         df = load_event_file(eventfile, verbose)
         if events_df is None:
             events_df = df
@@ -375,101 +378,6 @@ def create_design_matrices(
         add_deriv=True,
     )
     return all_designs
-
-
-def create_design_matrices_NO_LONGER_USING(
-    events_df_long, conv_resolution=0.2, tr=1, verbose=False
-):
-    """
-    Creates convolved design matrices for the MID task: full model, cue only, cuefix and fix only
-    input:
-    events_df_long: pd.DataFrame
-        Long format dataframe of events
-    conv_resolution: float
-        Microtime resolution where convolution takes plase in seconds
-    tr: float
-        Repetition time of the BOLD data in seconds
-    verbose: bool
-        Print out debug information
-    output:
-    all_designs: dict
-        Dictionary of design matrices
-    """
-    # create the full design matrix
-    maxtime = np.ceil(np.max(events_df_long['onset'] + events_df_long['duration']) + 8)
-    timepoints_conv = np.arange(0, maxtime, conv_resolution)
-    timepoints_data = np.arange(0, maxtime, tr)
-    hrf_func = spm_hrf(conv_resolution)
-    if verbose:
-        print(f'Maxtime: {maxtime}')
-        print(f'Timepoints convolution: {timepoints_conv.shape}')
-        print(f'Timepoints data: {timepoints_data.shape}')
-    trial_types = events_df_long['trial_type'].unique()
-    desmtx_microtime = pd.DataFrame()
-    desmtx_conv_microtime = pd.DataFrame()
-    for trial_type in trial_types:
-        trial_type_onsets = events_df_long[events_df_long['trial_type'] == trial_type][
-            'onset'
-        ].values
-        trial_type_durations = events_df_long[
-            events_df_long['trial_type'] == trial_type
-        ]['duration'].values
-        sf_df = make_stick_function(
-            trial_type_onsets, trial_type_durations, maxtime, resolution=conv_resolution
-        )
-        desmtx_microtime[trial_type] = sf_df.sf.values
-        desmtx_conv_microtime[trial_type] = np.convolve(sf_df.sf.values, hrf_func)[
-            : sf_df.shape[0]
-        ]
-    desmtx_conv_microtime['constant'] = 1
-    desmtx_conv_microtime.index = timepoints_conv
-    desmtx_conv = desmtx_conv_microtime.loc[timepoints_data]
-    # create other designs from the full design
-    all_designs = {
-        'saturated': desmtx_conv,
-        'cue only': desmtx_conv.filter(regex='CUE|FEEDBACK|constant'),
-        #    'fix_only': desmtx_conv.filter(regex='FIXATION|FEEDBACK|constant'),
-        'cue fix': desmtx_conv.filter(regex='FEEDBACK|constant'),
-    }
-    # sum CUE and FIXATION regressors to make CUEFIX regressors
-    trial_types = [
-        val.replace('CUE_', '') for val in desmtx_conv.columns if 'CUE' in val
-    ]
-    for trial_type in trial_types:
-        all_designs['cue fix'].insert(
-            0,
-            f'CUEFIX_{trial_type}',
-            desmtx_conv.loc[:, f'CUE_{trial_type}'].values
-            + desmtx_conv.loc[:, f'FIXATION_{trial_type}'].values,
-        )
-    for key in all_designs.keys():
-        all_designs[key] = set_regressor_order(all_designs[key])
-    return all_designs
-
-
-def set_regressor_order_NO_LONGER_USED(desmat):
-    reg_names = desmat.columns
-    trial_types = np.sort(
-        [
-            val.replace('FEEDBACK_HIT_', '')
-            for val in reg_names
-            if 'FEEDBACK_HIT_' in val
-        ]
-    )
-    stim_types = [
-        val.replace('_LargeLoss', '') for val in reg_names if 'LargeLoss' in val
-    ]
-    regressors_ordered = [
-        f'{stim_type}_{trial_type}'
-        for trial_type in trial_types
-        for stim_type in stim_types
-    ]
-    if 'PROBE_RT' in reg_names:
-        regressors_ordered = regressors_ordered + ['PROBE', 'PROBE_RT', 'constant']
-    else:
-        regressors_ordered = regressors_ordered + ['constant']
-    desmat = desmat.reindex(regressors_ordered, axis=1)
-    return desmat
 
 
 def generate_data_nsim(desmtx_conv, beta_dict, nsims=100, noise_sd=1, beta_sub_sd=1):
@@ -830,7 +738,7 @@ def make_analysis_label(beta_dict, jitter=False, jitter_iti_min=2, jitter_iti_ma
 
 
 def get_subids(dataset='AHRB'):
-    subdirs = glob(f'../{dataset}/sub*')
+    subdirs = glob(f'{data_path}/{dataset}/sub*')
     subids = [string_val.split('-', 1)[1] for string_val in subdirs]
     return subids
 
