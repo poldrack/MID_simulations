@@ -1,0 +1,31 @@
+[project]
+name = "mid-simulations"
+version = "0.1.0"
+description = "Simulation code for MID modeling paper"
+readme = "README.md"
+authors = [
+    { name = "Jeanette Mumford", email = "jeanette.mumford@gmail.com" } 
+]
+requires-python = ">=3.12"
+dependencies = [
+    "coverage>=7.6.8",
+    "ipykernel>=6.29.5",
+    "ipython>=8.30.0",
+    "jupyterlab>=4.3.2",
+    "matplotlib>=3.9.3",
+    "nilearn>=0.11.0",
+    "numpy>=2.1.3",
+    "pandas>=2.2.3",
+    "pytest>=8.3.4",
+    "scipy>=1.14.1",
+    "seaborn>=0.13.2",
+    "statsmodels>=0.14.4",
+    "tqdm>=4.67.1",
+]
+
+#[project.scripts]
+#mid-simulations = "mid_simulations:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
