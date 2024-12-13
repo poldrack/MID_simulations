@@ -33,6 +33,10 @@ build-backend = "hatchling.build"
 extend-include = ["*.ipynb"]
 quote-style = "double"
 
+[tool.ruff.format]
+# Prefer single quotes over double quotes.
+quote-style = "double"
+
 [tool.uv]
 dev-dependencies = [
     "pytest>=8.3.4",
