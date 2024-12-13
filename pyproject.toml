@@ -32,7 +32,7 @@ build-backend = "hatchling.build"
 [tool.ruff]
 extend-include = ["*.ipynb"]
 
-[tool.ruff]
+[tool.ruff.format]
 quote-style = "single"
 
 [tool.uv]
