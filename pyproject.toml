@@ -29,13 +29,11 @@ dependencies = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.ruff.lint]
+[tool.ruff]
 extend-include = ["*.ipynb"]
-quote-style = "double"
 
-[tool.ruff.format]
-# Prefer single quotes over double quotes.
-quote-style = "double"
+[tool.ruff]
+quote-style = "single"
 
 [tool.uv]
 dev-dependencies = [
