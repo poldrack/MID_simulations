@@ -944,11 +944,15 @@ dependencies = [
     { name = "nilearn" },
     { name = "numpy" },
     { name = "pandas" },
-    { name = "pytest" },
     { name = "scipy" },
     { name = "seaborn" },
     { name = "statsmodels" },
     { name = "tqdm" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
 ]
 
 [package.metadata]
@@ -961,12 +965,14 @@ requires-dist = [
     { name = "nilearn", specifier = ">=0.11.0" },
     { name = "numpy", specifier = ">=2.1.3" },
     { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pytest", specifier = ">=8.3.4" },
     { name = "scipy", specifier = ">=1.14.1" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "statsmodels", specifier = ">=0.14.4" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3.4" }]
 
 [[package]]
 name = "mistune"
