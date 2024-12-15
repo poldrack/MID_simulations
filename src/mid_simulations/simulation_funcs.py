@@ -11,24 +11,17 @@ from nilearn.glm import expression_to_contrast_vector
 from nilearn.glm.first_level.hemodynamic_models import spm_hrf, spm_time_derivative
 from scipy.stats import gamma, ttest_1samp
 
-data_path = importlib.resources.files('mid_simulations')
+data_path = importlib.resources.files('mid_simulations') / 'Data'
 
 
 def get_beta_dicts(dataset='AHRB'):
     if (dataset == 'AHRB') or (dataset == 'testdata'):
         beta_dicts = [
             {},
-            {'Cue: LargeWin': 0.2, 'Cue: SmallWin': 0.2},
-            {'Fixation: LargeWin': 0.2, 'Fixation: SmallWin': 0.2},
-            {
-                'Cue: LargeWin': 0.3,
-                'Cue: SmallWin': 0.3,
-                'Fixation: LargeWin': 0.3,
-                'Fixation: SmallWin': 0.3,
-            },
-            {'Probe': 1.25},
+            {'Cue: LargeWin': 0.35, 'Cue: SmallWin': 0.35},
+            {'Fixation: LargeWin': 0.35, 'Fixation: SmallWin': 0.35},
+            {'Probe': 1.1},
             {'Feedback: LargeWinHit': 0.4, 'Feedback: SmallWinHit': 0.4},
-            {'Feedback: LargeWinHit': 0.2, 'Feedback: LargeWinMiss': -0.2},
         ]
     elif dataset == 'ABCD':
         beta_dicts = [
@@ -119,7 +112,7 @@ def check_events_df_long(events_long, dataset='AHRB'):
     if dataset == 'ABCD':
         assert num_trial_types == 22, 'ABCD should have 22 trial types'
     elif (dataset == 'AHRB') or (dataset == 'testdata'):
-        assert num_trial_types == 25, 'AHRB should have 25 trial types'
+        assert num_trial_types == 21, 'AHRB should have 21 trial types'
 
 
 def get_events_df_for_subject(sub, dataset='AHRB', verbose=False):
@@ -188,13 +181,13 @@ def get_subdata_long(sub, dataset='AHRB', verbose=False):
         events_long['event'] == 'FEEDBACK', 'FEEDBACK_HIT_MISS'
     ]
 
-    if (dataset == 'AHRB') or (dataset == 'testdata'):
-        events_long['event'] = events_long['event'] + '_'
-    if dataset == 'ABCD':
-        events_long.loc[events_long['event'].str.contains('PROBE'), 'TRIAL_TYPE'] = ''
-        events_long.loc[~events_long['event'].str.contains('PROBE'), 'event'] = (
-            events_long.loc[~events_long['event'].str.contains('PROBE'), 'event'] + '_'
-        )
+    # if (dataset == 'AHRB') or (dataset == 'testdata'):
+    #    events_long['event'] = events_long['event'] + '_'
+    # if dataset == 'ABCD':
+    events_long.loc[events_long['event'].str.contains('PROBE'), 'TRIAL_TYPE'] = ''
+    events_long.loc[~events_long['event'].str.contains('PROBE'), 'event'] = (
+        events_long.loc[~events_long['event'].str.contains('PROBE'), 'event'] + '_'
+    )
 
     events_long['trial_type'] = events_long['event'] + events_long['TRIAL_TYPE']
     events_long.drop(
@@ -611,6 +604,32 @@ def scale_regressors(base_max_ranges, designs):
     return designs_scaled
 
 
+def orth_deriv_regs(designs):
+    """
+    Orthogonalize the derivative regressors
+    """
+    designs_orth = {}
+    for desname, desmat in designs.items():
+        desmat_orth_loop = desmat.copy()
+        deriv_cols = [col for col in desmat.columns if 'Deriv' in col]
+        for col in deriv_cols:
+            col_no_deriv_label = col.replace(' Deriv', '')
+            orth_maker_desmat = np.column_stack(
+                (
+                    desmat_orth_loop[col_no_deriv_label],
+                    np.ones(len(desmat_orth_loop[col_no_deriv_label])),
+                )
+            )
+            desmat_orth_loop[col] -= (
+                orth_maker_desmat
+                @ np.linalg.pinv(orth_maker_desmat.T @ orth_maker_desmat)
+                @ orth_maker_desmat.T
+                @ desmat_orth_loop[col]
+            )
+        designs_orth[desname] = desmat_orth_loop
+    return designs_orth
+
+
 def est_eff_vif_all_subs(
     oversampling=50,
     tr=0.8,
@@ -618,11 +637,15 @@ def est_eff_vif_all_subs(
     jitter_iti_min=2,
     jitter_iti_max=6,
     dataset='AHRB',
-    nsubs=108,
+    nsubs=None,
+    orth_deriv=False,
 ):
     """
     Estimate the efficiency and variance inflation factor (VIF) for all subjects
     """
+    subids = get_subids(dataset=dataset)
+    if nsubs is None:
+        nsubs = len(subids)
     # Placeholder for results
     for sub in range(1, nsubs + 1):
         events = None
@@ -639,6 +662,8 @@ def est_eff_vif_all_subs(
         designs = create_design_matrices(
             events, oversampling=oversampling, tr=tr, gen_saturated_deriv=True
         )
+        if orth_deriv:
+            designs = orth_deriv_regs(designs)
         base_max_ranges = est_baseline_max_range(
             events, oversampling=oversampling, tr=tr
         )
