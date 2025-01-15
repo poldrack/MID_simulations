@@ -27,13 +27,19 @@ dependencies = [
 
 [build-system]
 requires = ["hatchling"]
-build-backend = "hatchling.build"
+build-backend = "hatchling.build"   
 
 [tool.ruff]
 extend-include = ["*.ipynb"]
 
 [tool.ruff.format]
 quote-style = "single"
+
+[tool.ruff.lint]
+extend-select = ["E501", "W", "N", "R", "I"]
+
+[tool.pytest.ini_options]
+testpaths=['tests/test_simulation_funcs.py']
 
 [tool.uv]
 dev-dependencies = [
