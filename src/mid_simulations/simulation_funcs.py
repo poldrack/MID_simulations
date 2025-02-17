@@ -533,10 +533,10 @@ def est_vifs(designs, contrast_matrices):
         ) / desmat_centered_scaled.std()
         contrast_mat = contrast_matrices[desname][:, column_keep]
 
-        worst_case_covmat = np.linalg.pinv(
+        worst_case_covmat = np.linalg.inv(
             desmat_centered_scaled.transpose() @ desmat_centered_scaled
         )
-        best_case_covmat = np.linalg.pinv(
+        best_case_covmat = np.linalg.inv(
             np.multiply(
                 desmat_centered_scaled.transpose() @ desmat_centered_scaled,
                 np.identity(desmat_centered_scaled.shape[1]),
