@@ -12,7 +12,7 @@ wheels/
 # Cannot copy ABCD data
 ABCD
 junk
-*/junk
+*/junk*
 old
 
 # VS Code settings
