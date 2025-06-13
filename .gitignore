@@ -11,6 +11,9 @@ wheels/
 
 # Cannot copy ABCD data
 ABCD
+junk
+*/junk
+old
 
 # VS Code settings
 .vscode
