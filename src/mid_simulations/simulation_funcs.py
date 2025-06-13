@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from joblib import Parallel, delayed
 from nilearn.glm import expression_to_contrast_vector
+from nilearn.glm.first_level.design_matrix import create_cosine_drift
 from nilearn.glm.first_level.hemodynamic_models import spm_hrf, spm_time_derivative
 from scipy.stats import ttest_1samp
 
@@ -26,16 +27,16 @@ def get_beta_dicts(dataset='AHRB'):
     elif dataset == 'ABCD':
         beta_dicts = [
             {},
-            {'Cue: LargeWin': 0.15, 'Cue: SmallWin': 0.15},
-            {'Fixation: LargeWin': 0.15, 'Fixation: SmallWin': 0.15},
+            {'Cue: LargeWin': 0.22, 'Cue: SmallWin': 0.22},
+            {'Fixation: LargeWin': 0.22, 'Fixation: SmallWin': 0.22},
             # {
             #     'Cue: LargeWin': 0.15,
             #     'Cue: SmallWin': 0.15,
             #     'Fixation: LargeWin': 0.15,
             #     'Fixation: SmallWin': 0.15,
             # },
-            {'Probe': 0.55},
-            {'Probe: RT': 0.3},
+            {'Probe: Win': 0.85},  # realistically much larger (like 1.8 or more)
+            {'Probe: RT': 0.35},
             # {
             #     'Cue: LargeWin': 0.15,
             #     'Cue: SmallWin': 0.15,
@@ -44,8 +45,23 @@ def get_beta_dicts(dataset='AHRB'):
             #     'Probe': 0.5,
             #     'Probe: RT': 0.3,
             # },
-            {'Feedback: LargeWinHit': 0.18, 'Feedback: SmallWinHit': 0.18},
+            {'Feedback: LargeWinHit': 0.25, 'Feedback: SmallWinHit': 0.25},
             # {'Feedback: LargeWinHit': 0.09, 'Feedback: LargeWinMiss': -0.09},
+        ]
+    elif dataset == 'ABCD_deriv':
+        beta_dicts = [
+            {},
+            {'Cue: LargeWin Deriv': -5, 'Cue: SmallWin Deriv': -5},
+            {'Cue: LargeWin Deriv': -4, 'Cue: SmallWin Deriv': -4},
+            {'Cue: LargeWin Deriv': -3, 'Cue: SmallWin Deriv': -3},
+            {'Cue: LargeWin Deriv': -2, 'Cue: SmallWin Deriv': -2},
+            {'Cue: LargeWin Deriv': -1, 'Cue: SmallWin Deriv': -1},
+            {'Cue: LargeWin Deriv': 0, 'Cue: SmallWin Deriv': 0},
+            {'Cue: LargeWin Deriv': 1, 'Cue: SmallWin Deriv': 1},
+            {'Cue: LargeWin Deriv': 2, 'Cue: SmallWin Deriv': 2},
+            {'Cue: LargeWin Deriv': 3, 'Cue: SmallWin Deriv': 3},
+            {'Cue: LargeWin Deriv': 4, 'Cue: SmallWin Deriv': 4},
+            {'Cue: LargeWin Deriv': 5, 'Cue: SmallWin Deriv': 5},
         ]
     return beta_dicts
 
@@ -88,6 +104,11 @@ desmat_column_rename = {
     'FEEDBACK_MISS_NoMoneyStake_derivative': 'Feedback: NeutralMiss Deriv',
     'FEEDBACK_MISS_SmallGain_derivative': 'Feedback: SmallWinMiss Deriv',
     'FEEDBACK_MISS_SmallLoss_derivative': 'Feedback: SmallLossMiss Deriv',
+    'PROBE_LargeGain': 'Probe: Win',
+    'PROBE_SmallGain': 'Probe: Win',
+    'PROBE_LargeLoss': 'Probe: Loss',
+    'PROBE_SmallLoss': 'Probe: Loss',
+    'PROBE_NoMoneyStake': 'Probe: Neutral',
 }
 
 
@@ -138,7 +159,9 @@ def get_events_df_for_subject(sub, dataset='AHRB', verbose=False):
     return events_df
 
 
-def get_subdata_long(sub, dataset='AHRB', verbose=False):
+def get_subdata_long(
+    sub, dataset='AHRB', verbose=False, desmat_column_rename=desmat_column_rename
+):
     # reformat from wide to long format
     if dataset not in ['AHRB', 'ABCD', 'testdata']:
         raise ValueError('Invalid dataset, must be AHRB, ABCD, or testdata')
@@ -184,9 +207,9 @@ def get_subdata_long(sub, dataset='AHRB', verbose=False):
     # if (dataset == 'AHRB') or (dataset == 'testdata'):
     #    events_long['event'] = events_long['event'] + '_'
     # if dataset == 'ABCD':
-    events_long.loc[events_long['event'].str.contains('PROBE'), 'TRIAL_TYPE'] = ''
-    events_long.loc[~events_long['event'].str.contains('PROBE'), 'event'] = (
-        events_long.loc[~events_long['event'].str.contains('PROBE'), 'event'] + '_'
+    events_long.loc[events_long['event'].str.contains('PROBE_RT'), 'TRIAL_TYPE'] = ''
+    events_long.loc[~events_long['event'].str.contains('PROBE_RT'), 'event'] = (
+        events_long.loc[~events_long['event'].str.contains('PROBE_RT'), 'event'] + '_'
     )
 
     events_long['trial_type'] = events_long['event'] + events_long['TRIAL_TYPE']
@@ -196,7 +219,9 @@ def get_subdata_long(sub, dataset='AHRB', verbose=False):
         inplace=True,
     )
     events_long.reset_index(drop=True, inplace=True)
-    check_events_df_long(events_long, dataset=dataset)
+    # check_events_df_long(events_long, dataset=dataset)
+    events_long['trial_type'] = events_long['trial_type'].replace(desmat_column_rename)
+
     return events_long
 
 
@@ -205,7 +230,7 @@ def insert_jitter(events_in, min_iti=2, max_iti=6):
     events.sort_values('onset', inplace=True)
     # Check number of stimuli between Cue stimuli
     num_stim_between_cue_trials = (
-        events.index[events['trial_type'].str.contains('CUE')].diff().dropna()
+        events.index[events['trial_type'].str.contains('Cue')].diff().dropna()
     )
     assert (
         len(num_stim_between_cue_trials.unique()) == 1
@@ -251,18 +276,48 @@ def make_stick_function(onsets, durations, length, resolution=0.2):
     return sf_df
 
 
+def custom_column_sort(columns):
+    # Define group order
+    group_order = {'Cue': 0, 'Fixation': 1, 'Probe': 2, 'Feedback': 3, 'constant': 4}
+
+    def sort_key(col):
+        # Extract group prefix (before the colon) or use column name if no colon
+        if ':' in col:
+            prefix, suffix = col.split(':', 1)
+            prefix = prefix.strip()
+            suffix = suffix.strip()
+        else:
+            prefix = col
+            suffix = ''
+
+        # Special handling for Probe group
+        if prefix == 'Probe':
+            if 'RT' in suffix:
+                suffix_order = (1, suffix)  # Make sure RT comes last
+            else:
+                suffix_order = (0, suffix)
+        else:
+            suffix_order = (0, suffix)
+
+        return (group_order.get(prefix, float('inf')), prefix, *suffix_order)
+
+    return sorted(columns, key=sort_key)
+
+
 def create_design_matrix(
     events_df_long,
     oversampling=50,
     tr=1,
     verbose=False,
     add_deriv=False,
-    desmat_column_rename=desmat_column_rename,
+    include_hp_filter=False,
+    end_time_added=10,
 ):
     conv_resolution = tr / oversampling
-    maxtime = np.ceil(np.max(events_df_long['onset']) + 10)
+    maxtime = np.ceil(np.max(events_df_long['onset']) + end_time_added)
     timepoints_conv = np.round(np.arange(0, maxtime, conv_resolution), 3)
     timepoints_data = np.round(np.arange(0, maxtime, tr), 3)
+
     hrf_func = spm_hrf(tr, oversampling=oversampling)
     hrf_deriv_func = spm_time_derivative(tr, oversampling=oversampling)
     if verbose:
@@ -293,14 +348,26 @@ def create_design_matrix(
             )[: sf_df.shape[0]]
     desmtx_conv_microtime.index = timepoints_conv
     desmtx_conv = desmtx_conv_microtime.loc[timepoints_data]
-    desmtx_conv = desmtx_conv.rename(columns=desmat_column_rename)
-    desmtx_conv = desmtx_conv[sorted(desmtx_conv.columns)]
+    desmtx_conv = desmtx_conv[custom_column_sort(desmtx_conv.columns)]
     desmtx_conv['constant'] = 1
+    if include_hp_filter:
+        dct_basis = create_cosine_drift(1 / 128, timepoints_data)
+        dct_basis = pd.DataFrame(
+            dct_basis, columns=[f'cosine{i}' for i in range(dct_basis.shape[1])]
+        )
+        dct_basis = dct_basis.loc[:, dct_basis.nunique() > 1]
+        dct_basis = dct_basis.reset_index(drop=True)
+        desmtx_conv = pd.concat([desmtx_conv.reset_index(drop=True), dct_basis], axis=1)
     return desmtx_conv
 
 
 def create_design_matrices(
-    events_df_long, oversampling=5, tr=1, gen_saturated_deriv=False, verbose=False
+    events_df_long,
+    oversampling=5,
+    tr=1,
+    gen_saturated_deriv=False,
+    include_hp_filter=False,
+    verbose=False,
 ):
     all_designs = {}
     all_designs['Saturated'] = create_design_matrix(
@@ -309,6 +376,7 @@ def create_design_matrices(
         tr=tr,
         verbose=verbose,
         add_deriv=False,
+        include_hp_filter=include_hp_filter,
     )
     if gen_saturated_deriv:
         all_designs['SaturatedDeriv'] = create_design_matrix(
@@ -317,9 +385,10 @@ def create_design_matrices(
             tr=tr,
             verbose=verbose,
             add_deriv=True,
+            include_hp_filter=include_hp_filter,
         )
     events_df_long_cue_imp = events_df_long[
-        events_df_long['trial_type'].str.contains('CUE|FEEDBACK')
+        events_df_long['trial_type'].str.contains('Cue|Feedback')
     ].copy()
     events_df_long_cue_imp['duration'] = tr / oversampling
     all_designs['CueNoDeriv'] = create_design_matrix(
@@ -328,6 +397,7 @@ def create_design_matrices(
         tr=tr,
         verbose=verbose,
         add_deriv=False,
+        include_hp_filter=include_hp_filter,
     )
     all_designs['CueYesDeriv'] = create_design_matrix(
         events_df_long_cue_imp,
@@ -335,6 +405,7 @@ def create_design_matrices(
         tr=tr,
         verbose=verbose,
         add_deriv=True,
+        include_hp_filter=include_hp_filter,
     )
     return all_designs
 
@@ -436,7 +507,7 @@ def create_contrasts_NOT_USING(designs):
     return contrasts_strings, contrast_matrices, c_pinv_xmats
 
 
-def create_contrasts(designs):
+def create_contrasts_orig(designs):
     """
     Creates contrast matrix for each of the designs that will produce estimates for
      each of the regressors, ANT: W-Neut, ANT: LW - Neut, FB: WHit - NeutHit, FB: LWHit - LWMiss
@@ -480,6 +551,73 @@ def create_contrasts(designs):
         )
         contrasts_strings[desname]['FB: LWHit-LWMiss'] = (
             '1 * Feedback_LargeWinHit - 1 * Feedback_LargeWinMiss'
+        )
+
+        contrast_matrices[desname] = np.array(
+            [
+                expression_to_contrast_vector(
+                    contrasts_strings[desname][key], col_names_no_space_no_colon
+                )
+                for key in contrasts_strings[desname].keys()
+            ]
+        )
+        pinv_desmat = np.linalg.pinv(desmat)
+        c_pinv_xmats[desname] = contrast_matrices[desname] @ pinv_desmat
+    return contrasts_strings, contrast_matrices, c_pinv_xmats
+
+
+# Changing for revision
+def create_contrasts(designs):
+    """
+    Creates contrast matrix for each of the designs that will produce estimates for
+     each of the regressors, ANT: W-Neut, ANT: LW - Neut, FB: WHit - NeutHit, FB: LWHit - LWMiss
+    input:
+    designs: dict
+        Dictionary of design matrices
+    output:
+    contrasts_strings: dict
+        Dictionary of contrast in string format
+    contrast_matrices: dict
+        Dictionary of contrast matrices, ncontrast x nregressors for each design
+    c_pinv_x_mat: dict
+        Dictionary of contrast matrices x pinv(design matrix), ncontrast x ntimepoints for each design.
+          To be used for contrast estimation (avoids recomputing pinv)
+    """
+    contrasts_strings = {}
+    contrast_matrices = {key: [] for key in designs.keys()}
+    c_pinv_xmats = {}
+    for desname, desmat in designs.items():
+        design_columns = np.sort(desmat.columns)
+        col_names_no_space = [name.replace(' ', '') for name in desmat.columns]
+        col_names_no_space_no_colon = [
+            name.replace(':', '_') for name in col_names_no_space
+        ]
+        contrasts_strings[desname] = {
+            colname: colname.replace(' ', '').replace(':', '_')
+            for colname in design_columns
+            if 'constant' not in colname and 'cosine' not in colname
+        }
+        contrasts_strings[desname]['Cue: LW-Base'] = '1* Cue_LargeWin'
+        # contrasts_strings[desname]['Cue: LW-Neut'] = (
+        #     '1 * Cue_LargeWin  - 1 * Cue_Neutral'
+        # )
+
+        contrasts_strings[desname]['Cue: LW-Neut*'] = (
+            '1 * Cue_LargeWin - 1 * Cue_Neutral'
+        )
+        contrasts_strings[desname]['Cue: LL-Neut*'] = (
+            '1 * Cue_LargeLoss - 1 * Cue_Neutral'
+        )
+        contrasts_strings[desname]['FB: LWHit-Base'] = '1 * Feedback_LargeWinHit'
+
+        contrasts_strings[desname]['FB: LWHit-NeutHit'] = (
+            '1 * Feedback_LargeWinHit - 1 * Feedback_NeutralHit'
+        )
+        contrasts_strings[desname]['FB: WHit-WMiss*'] = (
+            '.5 * Feedback_LargeWinHit + .5 * Feedback_SmallWinHit - .5 * Feedback_LargeWinMiss - .5 * Feedback_SmallWinMiss'
+        )
+        contrasts_strings[desname]['FB: LHit-LMiss*'] = (
+            '.5 * Feedback_LargeLossHit + .5 * Feedback_SmallLossHit - .5 * Feedback_LargeLossMiss - .5 * Feedback_SmallLossMiss'
         )
 
         contrast_matrices[desname] = np.array(
@@ -553,7 +691,11 @@ def est_baseline_max_range(events, oversampling=50, tr=0.8):
     avg_durations.columns = ['trial_type', 'duration']
     avg_durations['onset'] = 10
     designs = create_design_matrices(
-        avg_durations, oversampling=oversampling, tr=tr, gen_saturated_deriv=True
+        avg_durations,
+        oversampling=oversampling,
+        tr=tr,
+        gen_saturated_deriv=True,
+        include_hp_filter=False,
     )
     base_max_ranges = {}
     for desname, desmat in designs.items():
@@ -566,7 +708,10 @@ def scale_regressors(base_max_ranges, designs):
     for desname, desmat in designs.items():
         designs_scaled[desname] = desmat.copy()
         for col in desmat.columns:
-            designs_scaled[desname][col] = desmat[col] / base_max_ranges[desname][col]
+            if 'cosine' not in col:
+                designs_scaled[desname][col] = (
+                    desmat[col] / base_max_ranges[desname][col]
+                )
     return designs_scaled
 
 
@@ -605,6 +750,7 @@ def est_eff_vif_all_subs(
     dataset='AHRB',
     nsubs=None,
     orth_deriv=False,
+    include_hp_filter=False,
 ):
     """
     Estimate the efficiency and variance inflation factor (VIF) for all subjects
@@ -626,12 +772,18 @@ def est_eff_vif_all_subs(
             )
 
         designs = create_design_matrices(
-            events, oversampling=oversampling, tr=tr, gen_saturated_deriv=True
+            events,
+            oversampling=oversampling,
+            tr=tr,
+            gen_saturated_deriv=True,
+            include_hp_filter=include_hp_filter,
         )
         if orth_deriv:
             designs = orth_deriv_regs(designs)
         base_max_ranges = est_baseline_max_range(
-            events, oversampling=oversampling, tr=tr
+            events,
+            oversampling=oversampling,
+            tr=tr,
         )
         # should make efficiencies comparable
         designs = scale_regressors(base_max_ranges, designs)
@@ -658,6 +810,7 @@ def est_des_covmats_all_subs(
     jitter_iti_max=6,
     dataset='AHRB',
     nsubs=108,
+    include_hp_filter=False,
 ):
     """
     Estimate the efficiency and variance inflation factor (VIF) for all subjects
@@ -675,7 +828,12 @@ def est_des_covmats_all_subs(
                 events, min_iti=jitter_iti_min, max_iti=jitter_iti_max
             )
 
-        designs = create_design_matrices(events, oversampling=oversampling, tr=tr)
+        designs = create_design_matrices(
+            events,
+            oversampling=oversampling,
+            tr=tr,
+            include_hp_filter=include_hp_filter,
+        )
         if sub == 1:
             covmats = {model: [] for model in designs.keys()}
         covmats_loop = est_des_covs(designs)
@@ -748,6 +906,8 @@ def sim_group_models_parallel(
     n_jobs=None,
     dataset='AHRB',
     nsubs=None,
+    include_hp_filter=False,
+    gen_saturated_deriv=False,
 ):
     if n_jobs is None:
         n_jobs = multiprocessing.cpu_count() - 1  # save one core for the OS
@@ -770,6 +930,8 @@ def sim_group_models_parallel(
             jitter_iti_max=jitter_iti_max,
             verbose=verbose,
             dataset=dataset,
+            include_hp_filter=include_hp_filter,
+            gen_saturated_deriv=gen_saturated_deriv,
         )
         for sub in range(1, nsubs + 1)
     )
@@ -796,6 +958,8 @@ def sim_data_est_cons_sub(
     jitter_iti_max=6,
     verbose=False,
     dataset='AHRB',
+    include_hp_filter=False,
+    gen_saturated_deriv=False,
 ):
     try:
         events = get_subdata_long(sub, dataset=dataset)
@@ -807,10 +971,71 @@ def sim_data_est_cons_sub(
         return None
     if jitter:
         events = insert_jitter(events, min_iti=jitter_iti_min, max_iti=jitter_iti_max)
-    designs = create_design_matrices(events, oversampling=oversampling, tr=tr)
+    designs = create_design_matrices(
+        events,
+        oversampling=oversampling,
+        tr=tr,
+        include_hp_filter=include_hp_filter,
+        gen_saturated_deriv=gen_saturated_deriv,
+    )
+    if gen_saturated_deriv:
+        desmat_true = designs['SaturatedDeriv']
+        designs = designs = {
+            k: v for k, v in designs.items() if k in ['Saturated', 'CueYesDeriv']
+        }
+    else:
+        desmat_true = designs['Saturated']
+
     contrast_strings, contrasts_matrices, c_pinv_xmats = create_contrasts(designs)
     data = generate_data_nsim(
-        designs['Saturated'],
+        desmat_true,
+        beta_dict,
+        nsims=nsims,
+        noise_sd=noise_sd,
+        beta_sub_sd=beta_sub_sd,
+    )
+    contrast_ests = {}
+    for desname, x_pinv_mat in c_pinv_xmats.items():
+        contrast_ests[desname] = x_pinv_mat @ data
+    output = {
+        'contrast_strings': contrast_strings,
+        'contrast_ests': contrast_ests,
+        'designs': designs,
+    }
+    return output
+
+
+def sim_data_sat_deriv_est_cons_sub(
+    sub,
+    beta_dict,
+    noise_sd,
+    beta_sub_sd,
+    nsims=100,
+    oversampling=5,
+    tr=1,
+    jitter=False,
+    jitter_iti_min=2,
+    jitter_iti_max=6,
+    verbose=False,
+    dataset='AHRB',
+    include_hp_filter=False,
+):
+    try:
+        events = get_subdata_long(sub, dataset=dataset)
+    except Exception as e:
+        # this is bad practice in general, but we need to do it here
+        # because this is wrapped in a delayed call in joblib
+        print(f'Error loading sub {sub}')
+        print(e)
+        return None
+    if jitter:
+        events = insert_jitter(events, min_iti=jitter_iti_min, max_iti=jitter_iti_max)
+    designs = create_design_matrices(
+        events, oversampling=oversampling, tr=tr, include_hp_filter=include_hp_filter
+    )
+    contrast_strings, contrasts_matrices, c_pinv_xmats = create_contrasts(designs)
+    data = generate_data_nsim(
+        designs['SaturatedDeriv'],
         beta_dict,
         nsims=nsims,
         noise_sd=noise_sd,
@@ -923,3 +1148,75 @@ if __name__ == '__main__':  # pragma: no cover
         assert data is not None
         assert data.shape[1] == nsims
         assert all(np.var(data) > 0)
+
+
+def sim_data_est_cons_sub_shift(
+    sub,
+    beta_dict,
+    noise_sd,
+    beta_sub_sd,
+    nsims=100,
+    oversampling=5,
+    tr=1,
+    jitter=False,
+    jitter_iti_min=2,
+    jitter_iti_max=6,
+    verbose=False,
+    dataset='AHRB',
+    include_hp_filter=False,
+    gen_saturated_deriv=False,
+    ons_shift=0,
+):
+    try:
+        events = get_subdata_long(sub, dataset=dataset)
+    except Exception as e:
+        # this is bad practice in general, but we need to do it here
+        # because this is wrapped in a delayed call in joblib
+        print(f'Error loading sub {sub}')
+        print(e)
+        return None
+    if jitter:
+        events = insert_jitter(events, min_iti=jitter_iti_min, max_iti=jitter_iti_max)
+    designs = create_design_matrices(
+        events,
+        oversampling=oversampling,
+        tr=tr,
+        include_hp_filter=include_hp_filter,
+        gen_saturated_deriv=gen_saturated_deriv,
+    )
+    if gen_saturated_deriv:
+        desmat_true = designs['SaturatedDeriv']
+        designs = designs = {
+            k: v for k, v in designs.items() if k in ['Saturated', 'CueNoDeriv']
+        }
+    else:
+        desmat_true = designs['Saturated']
+
+    contrast_strings, contrasts_matrices, c_pinv_xmats = create_contrasts(designs)
+
+    events_shifted = events.copy()
+    events_shifted['onset'] += ons_shift
+    designs_shifted = create_design_matrices(
+        events_shifted,
+        oversampling=oversampling,
+        tr=tr,
+        include_hp_filter=include_hp_filter,
+        gen_saturated_deriv=gen_saturated_deriv,
+    )
+
+    data = generate_data_nsim(
+        desmat_true,
+        beta_dict,
+        nsims=nsims,
+        noise_sd=noise_sd,
+        beta_sub_sd=beta_sub_sd,
+    )
+    contrast_ests = {}
+    for desname, x_pinv_mat in c_pinv_xmats.items():
+        contrast_ests[desname] = x_pinv_mat @ data
+    output = {
+        'contrast_strings': contrast_strings,
+        'contrast_ests': contrast_ests,
+        'designs': designs,
+    }
+    return output
