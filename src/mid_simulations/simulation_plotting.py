@@ -392,7 +392,7 @@ def plot_error_grid(
     f, axs = plt.subplots(
         num_plots,
         1,  # gridspec_kw={'hspace': 0.5},
-        figsize=(fig_width, 10),
+        figsize=(fig_width, 15),
         sharex=True,
     )
     cbar_ax = f.add_axes([0.91, 0.2, 0.03, 0.5])
@@ -506,6 +506,22 @@ def sort_key(x):
         return (2, x)
 
 
+def compute_perch(row):
+    model = row['model']
+    contrast = row['contrast']
+    mean = row['mean']
+
+    if 'Saturated' in model:
+        if 'FB' in contrast or 'Feedback' in contrast:
+            return mean * 0.3429
+        elif 'Cue' in contrast:
+            return mean * 0.4004
+    elif 'Cue' in model:
+        return mean * 0.0034
+    else:
+        return np.nan
+
+
 def plot_bias_significance(
     results,
     contrasts_only=False,
@@ -514,6 +530,8 @@ def plot_bias_significance(
     fig_path=None,
     newname_cue_yes_deriv=None,
     nsubs=500,
+    per_change=False,
+    add_sig_cells=True,
 ):
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
     cmap.set_bad('lightgrey')
@@ -537,14 +555,14 @@ def plot_bias_significance(
     f, axs = plt.subplots(
         len(results.keys()),
         1,  # gridspec_kw={'hspace': 0.5},
-        figsize=(fig_width, 10),
+        figsize=(fig_width, 15),
         sharex=True,
     )
     cbar_ax = f.add_axes([0.91, 0.2, 0.03, 0.5])
-    f.suptitle(
-        f"{title} \nAverage of group Cohen's Ds across simulations \nBias occurs when values are nonzero",
-        fontsize=bigfont,
-    )
+    # f.suptitle(
+    #     f"{title} \nAverage of group Cohen's Ds across simulations \nBias occurs when values are nonzero",
+    #     fontsize=bigfont,
+    # )
     if contrasts_only:
         omit_string = '^((?!-).)*$'
     else:
@@ -554,6 +572,7 @@ def plot_bias_significance(
         if newname_cue_yes_deriv is not None:
             data.loc[data['model'] == 'CueYesDeriv', 'model'] = newname_cue_yes_deriv
         data.loc[data['plot_alpha_val_power_error'] == 1, 'tval'] = np.nan
+        data.loc[data['plot_alpha_val_power_error'] == 1, 'mean'] = np.nan
         data['sigp'] = data['sigp'].astype(float)
         data.loc[data['plot_alpha_val_power_error'] == 1, 'sigp'] = pd.NA
 
@@ -561,14 +580,32 @@ def plot_bias_significance(
         # add extra blank lines when needed for aesthetics
         if len(setting.split('\n')) < 3:
             setting += '\n   ' * (3 - len(setting.split('\n')))
-        dat_plot = (
-            data.groupby(['contrast', 'model'])[['tval']]
-            .mean()
-            .reset_index()
-            .pivot(index='contrast', columns='model', values='tval')
-            .transpose()
-        )
-        dat_plot = dat_plot / np.sqrt(nsubs)
+        if not per_change:
+            dat_plot = (
+                data.groupby(['contrast', 'model'])[['tval']]
+                .mean()
+                .reset_index()
+                .pivot(index='contrast', columns='model', values='tval')
+                .transpose()
+            )
+            dat_plot = dat_plot / np.sqrt(nsubs)
+            f.suptitle(
+                f"{title} \nAverage of group Cohen's Ds across simulations \nBias occurs when values are nonzero",
+                fontsize=bigfont,
+            )
+        else:  # percent change WORKING HERE
+            data['perch'] = data.apply(compute_perch, axis=1)
+            dat_plot = (
+                data.groupby(['contrast', 'model'])[['perch']]
+                .mean()
+                .reset_index()
+                .pivot(index='contrast', columns='model', values='perch')
+                .transpose()
+            )
+            f.suptitle(
+                f'{title} \nAverage of group averages across simulations (% change)\nBias occurs when values are nonzero',
+                fontsize=bigfont,
+            )
         dat_plot = dat_plot[dat_plot.columns.drop(list(dat_plot.filter(regex='Deriv')))]
         if omit_string:
             dat_plot = dat_plot[
@@ -588,7 +625,7 @@ def plot_bias_significance(
         )
 
         dat_plot = dat_plot[cue_cols + fb_cols]
-        sig_cells = get_sim_set_con_significant(data, omit_string, omit_noderiv)
+
         g = sns.heatmap(
             dat_plot,
             vmin=-0.01,
@@ -602,19 +639,21 @@ def plot_bias_significance(
             fmt='.2f',
             annot_kws={'fontsize': smallfont2},
         )
-        for sig_cell in sig_cells:
-            fix_val = 0.02
-            sig_cell = (sig_cell[0] + 0.015, sig_cell[1] + fix_val)
-            g.add_patch(
-                plt.Rectangle(
-                    sig_cell,
-                    1 - 0.028,
-                    1 - fix_val / 2,
-                    ec='#433e3d',
-                    fc='none',
-                    lw=4,
+        if add_sig_cells:
+            sig_cells = get_sim_set_con_significant(data, omit_string, omit_noderiv)
+            for sig_cell in sig_cells:
+                fix_val = 0.02
+                sig_cell = (sig_cell[0] + 0.015, sig_cell[1] + fix_val)
+                g.add_patch(
+                    plt.Rectangle(
+                        sig_cell,
+                        1 - 0.028,
+                        1 - fix_val / 2,
+                        ec='#433e3d',
+                        fc='none',
+                        lw=4,
+                    )
                 )
-            )
         g.set_yticklabels(g.get_yticklabels(), size=smallfont1, rotation=0)
         g.set_xticklabels(g.get_xticklabels(), size=smallfont1, rotation=rotate_xlab)
 

@@ -47,6 +47,22 @@ def get_beta_dicts(dataset='AHRB'):
             # },
             {'Feedback: LargeWinHit': 0.25, 'Feedback: SmallWinHit': 0.25},
             # {'Feedback: LargeWinHit': 0.09, 'Feedback: LargeWinMiss': -0.09},
+            {
+                'Cue: LargeWin': 0.22,
+                'Cue: SmallWin': 0.22,
+                'Fixation: LargeWin': 0.22,
+                'Fixation: SmallWin': 0.22,
+                'Probe: Win': 0.85,
+                'Probe: RT': 0.35,
+            },
+            {
+                'Fixation: LargeWin': 0.22,
+                'Fixation: SmallWin': 0.22,
+                'Probe: Win': 0.85,
+                'Probe: RT': 0.35,
+                'Feedback: LargeWinHit': 0.25,
+                'Feedback: SmallWinHit': 0.25,
+            },
         ]
     elif dataset == 'ABCD_deriv':
         beta_dicts = [
